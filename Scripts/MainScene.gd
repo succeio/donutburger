@@ -13,6 +13,7 @@ var selected_inventory_index: int = -1
 var food_3d_node: Node3D = null
 
 func _ready() -> void:
+	Engine.set_meta("MainScene", self)
 	GameState.time_changed.connect(_on_time_changed)
 	GameState.game_over.connect(_on_game_over)
 	GameState.food_list_updated.connect(_update_ui)
@@ -20,7 +21,152 @@ func _ready() -> void:
 	roll_button.pressed.connect(_on_roll_pressed)
 	restart_button.pressed.connect(_on_restart_pressed)
 	
+	_setup_popup_ui()
 	GameState.start_game()
+
+var popup_panel: PanelContainer = null
+var popup_label: Label = null
+var popup_texture: TextureRect = null
+var popup_glow: Control = null
+var popup_tween: Tween = null
+
+func _setup_popup_ui() -> void:
+	popup_panel = PanelContainer.new()
+	popup_panel.visible = false
+	popup_panel.custom_minimum_size = Vector2(300, 220)
+	
+	popup_panel.anchors_preset = Control.PRESET_CENTER
+	popup_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	popup_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	
+	var sb = StyleBoxFlat.new()
+	sb.bg_color = Color(0.08, 0.08, 0.09, 0.96)
+	sb.set_border_width_all(5)
+	sb.border_color = Color.GOLD
+	sb.set_corner_radius_all(16)
+	# Add a slight drop shadow to the panel itself to give a "premium chest loot" look
+	sb.shadow_color = Color(0, 0, 0, 0.6)
+	sb.shadow_size = 12
+	popup_panel.add_theme_stylebox_override("panel", sb)
+	
+	var vbox = VBoxContainer.new()
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 15)
+	
+	var congrats = Label.new()
+	congrats.text = "ITEM FOUND!"
+	congrats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	congrats.add_theme_font_size_override("font_size", 14)
+	congrats.add_theme_color_override("font_color", Color.GOLD)
+	
+	popup_glow = Control.new()
+	popup_glow.custom_minimum_size = Vector2(100, 100)
+	popup_glow.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	
+	var glow_panel = Panel.new()
+	glow_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	glow_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	glow_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	
+	var glow_sb = StyleBoxFlat.new()
+	glow_sb.bg_color = Color(1, 0.85, 0, 0.1)
+	glow_sb.set_corner_radius_all(50)
+	# Smaller shadow size for subtle glow effect
+	glow_sb.shadow_color = Color(1, 0.85, 0, 0.95)
+	glow_sb.shadow_size = 15
+	glow_panel.add_theme_stylebox_override("panel", glow_sb)
+	popup_glow.add_child(glow_panel)
+	
+	# Container to wrap and center texture perfectly inside Control
+	var texture_container = CenterContainer.new()
+	texture_container.set_anchors_preset(Control.PRESET_FULL_RECT)
+	texture_container.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	texture_container.grow_vertical = Control.GROW_DIRECTION_BOTH
+	
+	popup_texture = TextureRect.new()
+	popup_texture.custom_minimum_size = Vector2(90, 90)
+	popup_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	popup_texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	
+	texture_container.add_child(popup_texture)
+	popup_glow.add_child(texture_container)
+	
+	popup_label = Label.new()
+	popup_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	popup_label.add_theme_font_size_override("font_size", 24)
+	
+	vbox.add_child(congrats)
+	vbox.add_child(popup_glow)
+	vbox.add_child(popup_label)
+	popup_panel.add_child(vbox)
+	
+	$UI.add_child(popup_panel)
+	
+	# Force anchor reset and layout calculation
+	popup_panel.set_anchors_preset(Control.PRESET_CENTER)
+	popup_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	popup_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	
+	# Set direct position offset to avoid top-left default alignment in CanvasLayer
+	popup_panel.position = (Vector2(1152, 648) - popup_panel.custom_minimum_size) / 2.0
+
+func trigger_combine_popup(food_id: String) -> void:
+	if not DataManager.foods.has(food_id):
+		return
+		
+	var data = DataManager.foods[food_id]
+	popup_label.text = data["name"]
+	popup_texture.texture = load(data["preview"])
+	
+	var rarity_color = DataManager.RARITY_INFO[data["rarity"]]["color"]
+	
+	# Match congrats text to item quality name (e.g. "RARE ITEM FOUND!")
+	var congrats_label = popup_panel.get_child(0).get_child(0) as Label
+	congrats_label.text = "%s ITEM FOUND!" % DataManager.RARITY_INFO[data["rarity"]]["name"].to_upper()
+	congrats_label.add_theme_color_override("font_color", rarity_color)
+	
+	# Set border color to product rarity color
+	var sb = popup_panel.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
+	sb.border_color = rarity_color
+	# Border width is thicker for TF2 style
+	sb.set_border_width_all(5)
+	popup_panel.add_theme_stylebox_override("panel", sb)
+	
+	# TF2 Style Gold/Rarity Spotlight Glow Effect
+	var glow_sb = popup_glow.get_child(0).get_theme_stylebox("panel").duplicate() as StyleBoxFlat
+	# The inner core is soft gold light, the outer massive glow matches the item quality
+	glow_sb.bg_color = Color(1.0, 0.85, 0.3, 0.15)
+	glow_sb.shadow_color = rarity_color
+	glow_sb.shadow_color.a = 0.95
+	glow_sb.shadow_size = 18
+	popup_glow.get_child(0).add_theme_stylebox_override("panel", glow_sb)
+	
+	popup_label.add_theme_color_override("font_color", rarity_color)
+	
+	popup_panel.visible = true
+	# Ensure size calculation is done and anchor positioning updates before calculating pivot
+	popup_panel.set_anchors_preset(Control.PRESET_CENTER)
+	popup_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	popup_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	
+	# Update positions dynamically based on viewport/screen size
+	var viewport_size = popup_panel.get_viewport_rect().size
+	popup_panel.position = (viewport_size - popup_panel.custom_minimum_size) / 2.0
+	
+	# Setting scale to Vector2.ZERO or near zero, then updating pivot dynamically
+	popup_panel.scale = Vector2(0.1, 0.1)
+	popup_panel.pivot_offset = popup_panel.custom_minimum_size / 2.0
+	
+	if popup_tween:
+		popup_tween.kill()
+		
+	popup_tween = create_tween()
+	popup_tween.set_parallel(false)
+	# Fast pop-up with a bouncy elastic animation like TF2 loot unbox, then holding
+	popup_tween.tween_property(popup_panel, "scale", Vector2(1.0, 1.0), 0.4).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	popup_tween.tween_interval(1.5)
+	popup_tween.tween_property(popup_panel, "scale", Vector2(0.0, 0.0), 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	popup_tween.tween_callback(func(): popup_panel.visible = false)
 
 func _populate_recipes_ui() -> void:
 	for child in recipe_list.get_children():
@@ -313,7 +459,19 @@ func _show_3d_food(food_id: String) -> void:
 		food_pivot.add_child(mesh_instance)
 		food_3d_node = mesh_instance
 		
-		mesh_instance.scale = Vector3(12, 12, 12)
+		# Calculate bounds of the mesh to normalize scale dynamically
+		var aabb = mesh.get_aabb()
+		var max_size = max(aabb.size.x, max(aabb.size.y, aabb.size.z))
+		if max_size > 0.001:
+			var target_scale = 1.6 / max_size
+			mesh_instance.scale = Vector3(target_scale, target_scale, target_scale)
+			# Center the mesh pivot based on AABB
+			mesh_instance.position = -aabb.position - (aabb.size / 2.0)
+			mesh_instance.position *= target_scale
+		else:
+			mesh_instance.scale = Vector3(12, 12, 12)
+			mesh_instance.position = Vector3.ZERO
+			
 		mesh_instance.rotation_degrees = Vector3(15, 0, 0)
 
 func _clear_3d_food() -> void:

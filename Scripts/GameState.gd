@@ -103,7 +103,10 @@ func combine_items(idx1: int, idx2: int) -> bool:
 					inventory.append(commons[randi() % commons.size()])
 					
 				AudioManager.play_sfx("res://Audio/confirmation_001.ogg", 3.0)
+				# Notify UI which item was created
 				emit_signal("food_list_updated")
+				if Engine.has_meta("MainScene"):
+					Engine.get_meta("MainScene").call("trigger_combine_popup", upgrade_result)
 				return true
 				
 	var result = DataManager.find_recipe(item1, item2)
@@ -130,7 +133,10 @@ func combine_items(idx1: int, idx2: int) -> bool:
 			inventory.append(commons[randi() % commons.size()])
 			
 		AudioManager.play_sfx("res://Audio/confirmation_002.ogg", 3.0)
+		# Notify UI which item was created
 		emit_signal("food_list_updated")
+		if Engine.has_meta("MainScene"):
+			Engine.get_meta("MainScene").call("trigger_combine_popup", result)
 		return true
 		
 	return false
