@@ -103,11 +103,20 @@ func _show_random_menu_food() -> void:
 				var mesh_instance = MeshInstance3D.new()
 				mesh_instance.mesh = mesh
 				
-				var material = StandardMaterial3D.new()
+				# Apply spatial glow shader to background foods too
+				var shader_material = ShaderMaterial.new()
+				shader_material.shader = load("res://Shaders/food_glow.gdshader")
 				if colormap_tex:
-					material.albedo_texture = colormap_tex
-					material.roughness = 0.8
-				mesh_instance.material_override = material
+					shader_material.set_shader_parameter("albedo_texture", colormap_tex)
+				
+				# Random subtle colored glow for menu elements
+				var rand_rarity = randi() % 5
+				var rarity_color = DataManager.RARITY_INFO[rand_rarity]["color"]
+				shader_material.set_shader_parameter("rim_color", rarity_color)
+				shader_material.set_shader_parameter("rim_intensity", 1.2)
+				shader_material.set_shader_parameter("rim_power", 4.0)
+				
+				mesh_instance.material_override = shader_material
 				
 				# Scale based on bounds
 				var aabb = mesh.get_aabb()
@@ -574,13 +583,21 @@ func _show_3d_food(food_id: String) -> void:
 		var mesh_instance = MeshInstance3D.new()
 		mesh_instance.mesh = mesh
 		
-		# Set material with colormap texture. Models in this pack use colormap.png
-		var material = StandardMaterial3D.new()
+		# Load and apply custom spatial shader with rim/fresnel glow effect
+		var shader_material = ShaderMaterial.new()
+		shader_material.shader = load("res://Shaders/food_glow.gdshader")
+		
 		var texture = load("res://Models/OBJ format/Textures/colormap.png")
 		if texture:
-			material.albedo_texture = texture
-			material.roughness = 0.8
-		mesh_instance.material_override = material
+			shader_material.set_shader_parameter("albedo_texture", texture)
+			
+		# Make selected/rare products glow with their rarity color
+		var rarity_color = DataManager.RARITY_INFO[food_data["rarity"]]["color"]
+		shader_material.set_shader_parameter("rim_color", rarity_color)
+		shader_material.set_shader_parameter("rim_intensity", 1.8)
+		shader_material.set_shader_parameter("rim_power", 3.0)
+		
+		mesh_instance.material_override = shader_material
 		
 		food_pivot.add_child(mesh_instance)
 		food_3d_node = mesh_instance
