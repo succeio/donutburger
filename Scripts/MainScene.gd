@@ -18,6 +18,8 @@ var food_3d_node: Node3D = null
 var menu_mode: bool = true
 var menu_rotation_speed: float = 0.5
 var menu_switch_timer: float = 0.0
+# Grid of floating food objects in the menu
+var menu_background_foods: Array[Node3D] = []
 
 func _ready() -> void:
 	Engine.set_meta("MainScene", self)
@@ -43,10 +45,16 @@ func _setup_start_menu_visuals() -> void:
 	var subtitle_lbl = $UI/StartMenu/VBox/SubTitle
 	var play_btn = $UI/StartMenu/VBox/PlayButton
 	
-	# Title styling
-	title_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2)) # bright yellow-gold
-	title_lbl.add_theme_color_override("font_outline_color", Color(0.1, 0.05, 0.0, 1.0))
-	title_lbl.add_theme_constant_override("outline_size", 16)
+	# Title styling: Orange Burger-styled 3D-bulging text
+	title_lbl.add_theme_color_override("font_color", Color(0.95, 0.45, 0.05, 1.0)) # Tasty burger orange
+	title_lbl.add_theme_color_override("font_outline_color", Color(0.2, 0.08, 0.0, 1.0)) # Deep bun brown outline
+	title_lbl.add_theme_constant_override("outline_size", 22)
+	
+	# Add a shadow overlay offset inside label theme (simulating 3D bulge/extrusion)
+	title_lbl.add_theme_color_override("font_shadow_color", Color(0.12, 0.04, 0.0, 0.95))
+	title_lbl.add_theme_constant_override("shadow_offset_x", 8)
+	title_lbl.add_theme_constant_override("shadow_offset_y", 8)
+	title_lbl.add_theme_constant_override("shadow_outline_size", 14)
 	
 	# Subtitle styling
 	subtitle_lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 0.95))
@@ -76,16 +84,68 @@ func _setup_start_menu_visuals() -> void:
 	play_btn.add_theme_constant_override("outline_size", 6)
 
 func _show_random_menu_food() -> void:
+	_clear_menu_background_foods()
+	
 	var keys = DataManager.foods.keys()
-	if keys.size() > 0:
-		var random_food = keys[randi() % keys.size()]
-		_show_3d_food(random_food)
-		# Slightly adjust speed & axis randomly
-		menu_rotation_speed = randf_range(0.3, 1.2)
+	if keys.size() == 0:
+		return
+		
+	# Create a dense grid of random food items across the 3D space behind the menu
+	# We place them at different X and Y offsets, but keep Z deep enough
+	var colormap_tex = load("res://Models/OBJ format/Textures/colormap.png")
+	
+	for x_slot in range(-5, 6, 2): # Steps of 2 units from -5 to 5
+		for y_slot in range(-3, 6, 2):
+			var random_food = keys[randi() % keys.size()]
+			var food_data = DataManager.foods[random_food]
+			var mesh = load(food_data["model"])
+			if mesh:
+				var mesh_instance = MeshInstance3D.new()
+				mesh_instance.mesh = mesh
+				
+				var material = StandardMaterial3D.new()
+				if colormap_tex:
+					material.albedo_texture = colormap_tex
+					material.roughness = 0.8
+				mesh_instance.material_override = material
+				
+				# Scale based on bounds
+				var aabb = mesh.get_aabb()
+				var max_size = max(aabb.size.x, max(aabb.size.y, aabb.size.z))
+				var target_scale = 1.2 / (max_size if max_size > 0.001 else 1.0)
+				mesh_instance.scale = Vector3(target_scale, target_scale, target_scale)
+				
+				# Position relative to camera view
+				var target_pos = Vector3(x_slot * 1.5, y_slot * 1.5, -2.0)
+				# Offset slightly to center mesh pivot
+				var offset_pivot = -aabb.position - (aabb.size / 2.0)
+				mesh_instance.position = target_pos + (offset_pivot * target_scale)
+				
+				# Give random starting rotation
+				mesh_instance.rotation_degrees = Vector3(
+					randf_range(0, 360),
+					randf_range(0, 360),
+					randf_range(0, 360)
+				)
+				
+				# Store rotation speeds on the instance meta properties
+				mesh_instance.set_meta("rot_speed_x", randf_range(-0.8, 0.8))
+				mesh_instance.set_meta("rot_speed_y", randf_range(-0.8, 0.8))
+				mesh_instance.set_meta("rot_speed_z", randf_range(-0.8, 0.8))
+				
+				food_pivot.add_child(mesh_instance)
+				menu_background_foods.append(mesh_instance)
+
+func _clear_menu_background_foods() -> void:
+	for node in menu_background_foods:
+		if is_instance_valid(node):
+			node.queue_free()
+	menu_background_foods.clear()
 
 func _on_play_pressed() -> void:
 	menu_mode = false
 	start_menu.visible = false
+	_clear_menu_background_foods()
 	_clear_3d_food()
 	AudioManager.play_sfx("res://Audio/maximize_001.ogg")
 	GameState.start_game()
@@ -546,15 +606,22 @@ func _clear_3d_food() -> void:
 	food_3d_node = null
 
 func _process(delta: float) -> void:
-	if food_3d_node and is_instance_valid(food_3d_node):
-		food_3d_node.rotate_y(delta * menu_rotation_speed)
-		
 	if menu_mode:
+		# Rotate all background food items in menu
+		for node in menu_background_foods:
+			if is_instance_valid(node):
+				node.rotate_x(delta * node.get_meta("rot_speed_x", 0.3))
+				node.rotate_y(delta * node.get_meta("rot_speed_y", 0.5))
+				node.rotate_z(delta * node.get_meta("rot_speed_z", 0.2))
+				
 		menu_switch_timer += delta
-		# Switch background food every 5 seconds
-		if menu_switch_timer >= 5.0:
+		# Switch all background foods every 8 seconds for visual freshness
+		if menu_switch_timer >= 8.0:
 			menu_switch_timer = 0.0
 			_show_random_menu_food()
+	else:
+		if food_3d_node and is_instance_valid(food_3d_node):
+			food_3d_node.rotate_y(delta * 1.0)
 
 func _on_time_changed(seconds: int) -> void:
 	time_label.text = "Time: %ds" % seconds

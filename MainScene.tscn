@@ -113,7 +113,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.12, 0.13, 0.15, 0.35)
+color = Color(0.08, 0.09, 0.11, 0.0)
 
 [node name="VBox" type="VBoxContainer" parent="UI/StartMenu"]
 layout_mode = 1
@@ -134,7 +134,7 @@ alignment = 1
 [node name="Title" type="Label" parent="UI/StartMenu/VBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9, 0.7, 0.1, 1)
-theme_override_font_sizes/font_size = 42
+theme_override_font_sizes/font_size = 56
 text = "DONUT BURGER"
 horizontal_alignment = 1
 
