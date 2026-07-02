@@ -5,8 +5,8 @@
 
 [sub_resource type="Environment" id="Environment_1"]
 background_mode = 1
-background_color = Color(0.2, 0.22, 0.25, 1)
-ambient_light_color = Color(0.8, 0.8, 0.8, 1)
+background_color = Color(0.78, 0.56, 0.16, 1)
+ambient_light_color = Color(0.9, 0.9, 0.9, 1)
 
 [node name="MainScene" type="Node3D"]
 script = ExtResource("1_main")
@@ -19,10 +19,15 @@ transform = Transform3D(0.866025, -0.353553, 0.353553, 0, 0.707107, 0.707107, -0
 shadow_enabled = true
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 4, 4)
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 2.5, 3.2)
 
 [node name="FoodPivot" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
+
+[node name="KitchenScene" type="Node3D" parent="."]
+
+[node name="Table" type="MeshInstance3D" parent="KitchenScene"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 
 [node name="UI" type="CanvasLayer" parent="."]
 

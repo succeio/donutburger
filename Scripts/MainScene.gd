@@ -4,6 +4,7 @@ extends Node3D
 @onready var play_button = $UI/StartMenu/VBox/PlayButton
 @onready var btn_ru = $UI/StartMenu/VBox/LanguageContainer/BtnRU
 @onready var btn_zh = $UI/StartMenu/VBox/LanguageContainer/BtnZH
+@onready var main_layout = $UI/MainLayout
 @onready var recipe_list = $UI/MainLayout/LeftPanel/VBox/Scroll/RecipeList
 @onready var inventory_grid = $UI/MainLayout/RightPanel/VBox/Scroll/InventoryGrid
 @onready var left_panel_title = $UI/MainLayout/LeftPanel/VBox/Title
@@ -40,9 +41,11 @@ func _ready() -> void:
 	btn_zh.pressed.connect(func(): LocManager.set_language("zh"))
 	
 	_setup_popup_ui()
+	_setup_kitchen_scene()
 	
 	# Start in menu mode, display random rotating food
 	menu_mode = true
+	main_layout.visible = false
 	start_menu.visible = true
 	_setup_start_menu_visuals()
 	_update_localization()
@@ -151,6 +154,7 @@ func _clear_menu_background_foods() -> void:
 func _on_play_pressed() -> void:
 	menu_mode = false
 	start_menu.visible = false
+	main_layout.visible = true
 	_clear_menu_background_foods()
 	_clear_3d_food()
 	AudioManager.play_sfx("res://Audio/maximize_001.ogg")
@@ -648,6 +652,7 @@ func _on_time_changed(seconds: int) -> void:
 
 func _on_game_over(score: int) -> void:
 	score_label.text = LocManager.translate_key("GAMEOVER_SCORE", score)
+	main_layout.visible = false
 	game_over_overlay.visible = true
 
 func _on_roll_pressed() -> void:
@@ -696,3 +701,115 @@ func _update_localization() -> void:
 	restart_button.text = LocManager.translate_key("GAMEOVER_RESTART")
 	
 	_update_ui()
+
+func _setup_kitchen_scene() -> void:
+	var kitchen_scene = get_node_or_null("KitchenScene")
+	if not kitchen_scene:
+		return
+		
+	var colormap_tex = load("res://Models/OBJ format/Textures/colormap.png")
+	
+	# Central cutting board
+	var cutting_board_mesh = load("res://Models/OBJ format/cutting-board.obj")
+	if cutting_board_mesh:
+		var board_inst = MeshInstance3D.new()
+		board_inst.mesh = cutting_board_mesh
+		
+		# Material override to color it correctly
+		var material = StandardMaterial3D.new()
+		material.albedo_texture = colormap_tex
+		board_inst.material_override = material
+		
+		# Center the board
+		var aabb = cutting_board_mesh.get_aabb()
+		var max_size = max(aabb.size.x, max(aabb.size.y, aabb.size.z))
+		var target_scale = 1.8 / max_size
+		board_inst.scale = Vector3(target_scale, target_scale, target_scale)
+		board_inst.position = Vector3(0, -0.05, -0.2)
+		
+		kitchen_scene.add_child(board_inst)
+
+	# Frying pans, pots, utensils, and other assets on sides, top and bottom
+	var background_items = [
+		# Left side: Frying pan, pot, spoons, shaker, bottles, cheese, bag, beet
+		{"model": "res://Models/OBJ format/frying-pan.obj", "pos": Vector3(-1.8, 0.05, -0.4), "scale": 1.4, "rot": Vector3(0, 45, 0)},
+		{"model": "res://Models/OBJ format/pot.obj", "pos": Vector3(-2.2, 0.1, 0.6), "scale": 1.4, "rot": Vector3(0, 0, 0)},
+		{"model": "res://Models/OBJ format/cooking-knife.obj", "pos": Vector3(-1.2, 0.0, 0.8), "scale": 1.2, "rot": Vector3(0, -30, 0)},
+		{"model": "res://Models/OBJ format/cooking-spoon.obj", "pos": Vector3(-1.0, 0.0, -0.8), "scale": 1.2, "rot": Vector3(0, 120, 0)},
+		{"model": "res://Models/OBJ format/shaker-salt.obj", "pos": Vector3(-0.8, 0.0, -0.4), "scale": 0.8, "rot": Vector3(0, 0, 0)},
+		{"model": "res://Models/OBJ format/bottle-oil.obj", "pos": Vector3(-2.5, 0.2, -0.2), "scale": 1.3, "rot": Vector3(0, -20, 0)},
+		{"model": "res://Models/OBJ format/cheese.obj", "pos": Vector3(-1.5, 0.08, 0.2), "scale": 1.1, "rot": Vector3(0, 15, 0)},
+		{"model": "res://Models/OBJ format/mortar.obj", "pos": Vector3(-2.4, 0.05, 1.2), "scale": 1.1, "rot": Vector3(0, 0, 0)},
+		{"model": "res://Models/OBJ format/bottle-ketchup.obj", "pos": Vector3(-2.0, 0.15, -1.0), "scale": 1.0, "rot": Vector3(0, 10, 0)},
+		{"model": "res://Models/OBJ format/cup-coffee.obj", "pos": Vector3(-1.4, 0.05, -1.2), "scale": 0.9, "rot": Vector3(0, -45, 0)},
+		{"model": "res://Models/OBJ format/apple.obj", "pos": Vector3(-0.9, 0.05, 0.3), "scale": 0.7, "rot": Vector3(0, 0, 0)},
+		{"model": "res://Models/OBJ format/avocado.obj", "pos": Vector3(-1.1, 0.05, 0.4), "scale": 0.7, "rot": Vector3(0, 35, 0)},
+		{"model": "res://Models/OBJ format/bacon.obj", "pos": Vector3(-1.6, 0.05, 0.8), "scale": 0.8, "rot": Vector3(0, 45, 0)},
+		{"model": "res://Models/OBJ format/bag.obj", "pos": Vector3(-2.8, 0.3, 0.4), "scale": 1.3, "rot": Vector3(0, 10, 0)},
+		{"model": "res://Models/OBJ format/beet.obj", "pos": Vector3(-1.3, 0.05, 1.1), "scale": 0.8, "rot": Vector3(0, 0, 0)},
+		{"model": "res://Models/OBJ format/cauliflower.obj", "pos": Vector3(-2.7, 0.1, -0.8), "scale": 1.0, "rot": Vector3(0, 0, 0)},
+
+		# Right side: Plates, knives, forks, pans, pepper shaker, bread, tomato
+		{"model": "res://Models/OBJ format/pan.obj", "pos": Vector3(1.8, 0.05, -0.4), "scale": 1.4, "rot": Vector3(0, -45, 0)},
+		{"model": "res://Models/OBJ format/utensil-fork.obj", "pos": Vector3(1.1, 0.0, -0.8), "scale": 1.0, "rot": Vector3(0, -10, 0)},
+		{"model": "res://Models/OBJ format/utensil-knife.obj", "pos": Vector3(1.3, 0.0, -0.8), "scale": 1.0, "rot": Vector3(0, 10, 0)},
+		{"model": "res://Models/OBJ format/plate.obj", "pos": Vector3(2.2, 0.02, 0.6), "scale": 1.5, "rot": Vector3(0, 0, 0)},
+		{"model": "res://Models/OBJ format/rollingPin.obj", "pos": Vector3(1.4, 0.05, 0.8), "scale": 1.2, "rot": Vector3(0, 75, 0)},
+		{"model": "res://Models/OBJ format/shaker-pepper.obj", "pos": Vector3(0.8, 0.0, -0.4), "scale": 0.8, "rot": Vector3(0, 0, 0)},
+		{"model": "res://Models/OBJ format/bread.obj", "pos": Vector3(1.6, 0.06, 0.1), "scale": 1.2, "rot": Vector3(0, -40, 0)},
+		{"model": "res://Models/OBJ format/tomato.obj", "pos": Vector3(2.0, 0.05, -1.0), "scale": 0.9, "rot": Vector3(0, 0, 0)},
+		{"model": "res://Models/OBJ format/knife-block.obj", "pos": Vector3(2.5, 0.25, -0.3), "scale": 1.5, "rot": Vector3(0, -90, 0)},
+		{"model": "res://Models/OBJ format/bottle-musterd.obj", "pos": Vector3(2.2, 0.15, -0.8), "scale": 1.0, "rot": Vector3(0, -15, 0)},
+		{"model": "res://Models/OBJ format/mug.obj", "pos": Vector3(1.5, 0.05, -1.2), "scale": 0.9, "rot": Vector3(0, 120, 0)},
+		{"model": "res://Models/OBJ format/pepper-mill.obj", "pos": Vector3(2.4, 0.15, 1.2), "scale": 1.1, "rot": Vector3(0, 0, 0)},
+		{"model": "res://Models/OBJ format/broccoli.obj", "pos": Vector3(1.0, 0.05, 0.3), "scale": 0.8, "rot": Vector3(0, 15, 0)},
+		{"model": "res://Models/OBJ format/cabbage.obj", "pos": Vector3(1.7, 0.08, 1.0), "scale": 1.0, "rot": Vector3(0, 0, 0)},
+		{"model": "res://Models/OBJ format/can-small.obj", "pos": Vector3(1.1, 0.05, -1.3), "scale": 0.8, "rot": Vector3(0, 20, 0)},
+		{"model": "res://Models/OBJ format/cherries.obj", "pos": Vector3(1.9, 0.05, 0.2), "scale": 0.7, "rot": Vector3(0, -10, 0)},
+		{"model": "res://Models/OBJ format/celery-stick.obj", "pos": Vector3(1.3, 0.05, 1.1), "scale": 0.8, "rot": Vector3(0, 0, 0)},
+
+		# Top/Back background: Stew pots, steamer, barrel, tajine, pumpkin
+		{"model": "res://Models/OBJ format/pot-stew.obj", "pos": Vector3(-0.9, 0.1, -1.6), "scale": 1.3, "rot": Vector3(0, 15, 0)},
+		{"model": "res://Models/OBJ format/steamer.obj", "pos": Vector3(0.9, 0.1, -1.6), "scale": 1.3, "rot": Vector3(0, -15, 0)},
+		{"model": "res://Models/OBJ format/barrel.obj", "pos": Vector3(-2.8, 0.4, -1.4), "scale": 1.6, "rot": Vector3(0, 0, 0)},
+		{"model": "res://Models/OBJ format/tajine.obj", "pos": Vector3(2.8, 0.1, -1.4), "scale": 1.4, "rot": Vector3(0, 0, 0)},
+		{"model": "res://Models/OBJ format/pumpkin.obj", "pos": Vector3(0.0, 0.1, -1.6), "scale": 1.2, "rot": Vector3(0, 45, 0)},
+		{"model": "res://Models/OBJ format/can.obj", "pos": Vector3(-1.6, 0.05, -1.7), "scale": 0.9, "rot": Vector3(0, 0, 0)},
+		{"model": "res://Models/OBJ format/bowl.obj", "pos": Vector3(-2.2, 0.05, -1.6), "scale": 1.1, "rot": Vector3(0, 0, 0)},
+		{"model": "res://Models/OBJ format/cup-tea.obj", "pos": Vector3(2.2, 0.05, -1.6), "scale": 0.9, "rot": Vector3(0, -10, 0)},
+		{"model": "res://Models/OBJ format/honey.obj", "pos": Vector3(-0.4, 0.1, -1.8), "scale": 0.8, "rot": Vector3(0, 0, 0)},
+		{"model": "res://Models/OBJ format/peanut-butter.obj", "pos": Vector3(0.4, 0.1, -1.8), "scale": 0.8, "rot": Vector3(0, 0, 0)},
+
+		# Bottom/Front foreground: Cooking spatula, whisk, lemon, carrot, onion, eggplant
+		{"model": "res://Models/OBJ format/cooking-spatula.obj", "pos": Vector3(-0.5, 0.0, 1.2), "scale": 1.1, "rot": Vector3(0, 80, 0)},
+		{"model": "res://Models/OBJ format/whisk.obj", "pos": Vector3(0.5, 0.0, 1.2), "scale": 1.1, "rot": Vector3(0, -80, 0)},
+		{"model": "res://Models/OBJ format/lemon.obj", "pos": Vector3(-1.1, 0.05, 1.3), "scale": 0.7, "rot": Vector3(0, 20, 0)},
+		{"model": "res://Models/OBJ format/carrot.obj", "pos": Vector3(-0.25, 0.05, 1.4), "scale": 0.8, "rot": Vector3(0, -10, 0)},
+		{"model": "res://Models/OBJ format/onion.obj", "pos": Vector3(0.25, 0.05, 1.4), "scale": 0.7, "rot": Vector3(0, 10, 0)},
+		{"model": "res://Models/OBJ format/eggplant.obj", "pos": Vector3(1.1, 0.05, 1.3), "scale": 0.9, "rot": Vector3(0, -25, 0)},
+		{"model": "res://Models/OBJ format/fish.obj", "pos": Vector3(-0.6, 0.02, 1.5), "scale": 1.0, "rot": Vector3(0, 60, 0)},
+		{"model": "res://Models/OBJ format/radish.obj", "pos": Vector3(0.6, 0.04, 1.5), "scale": 0.7, "rot": Vector3(0, -60, 0)},
+		{"model": "res://Models/OBJ format/pear.obj", "pos": Vector3(-1.4, 0.05, 1.4), "scale": 0.7, "rot": Vector3(0, 0, 0)},
+		{"model": "res://Models/OBJ format/banana.obj", "pos": Vector3(1.4, 0.05, 1.4), "scale": 0.8, "rot": Vector3(0, 30, 0)}
+	]
+
+	for item in background_items:
+		var item_mesh = load(item["model"])
+		if item_mesh:
+			var inst = MeshInstance3D.new()
+			inst.mesh = item_mesh
+			
+			var material = StandardMaterial3D.new()
+			material.albedo_texture = colormap_tex
+			inst.material_override = material
+			
+			var aabb = item_mesh.get_aabb()
+			var max_size = max(aabb.size.x, max(aabb.size.y, aabb.size.z))
+			var target_scale = item["scale"] / (max_size if max_size > 0.001 else 1.0)
+			inst.scale = Vector3(target_scale, target_scale, target_scale)
+			
+			var offset_pivot = (-aabb.position - (aabb.size / 2.0)) * target_scale
+			inst.position = item["pos"] + offset_pivot
+			inst.rotation_degrees = item["rot"]
+			
+			kitchen_scene.add_child(inst)
