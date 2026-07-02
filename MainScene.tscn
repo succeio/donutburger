@@ -1,6 +1,7 @@
-[gd_scene load_steps=3 format=3 uid="uid://b5s7a8c3d8e"]
+[gd_scene load_steps=4 format=3 uid="uid://b5s7a8c3d8e"]
 
 [ext_resource type="Script" path="res://Scripts/MainScene.gd" id="1_main"]
+[ext_resource type="Texture2D" uid="uid://c6y788a3e9f" path="res://brg.png" id="1_logo"]
 
 [sub_resource type="Environment" id="Environment_1"]
 background_mode = 1
@@ -122,21 +123,39 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -200.0
-offset_top = -150.0
-offset_right = 200.0
-offset_bottom = 150.0
+offset_left = -250.0
+offset_top = -320.0
+offset_right = 250.0
+offset_bottom = 320.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 20
 alignment = 1
 
-[node name="Title" type="Label" parent="UI/StartMenu/VBox"]
+[node name="Logo" type="TextureRect" parent="UI/StartMenu/VBox"]
+custom_minimum_size = Vector2(400, 400)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 0.7, 0.1, 1)
-theme_override_font_sizes/font_size = 56
-text = "DONUT BURGER"
-horizontal_alignment = 1
+size_flags_horizontal = 4
+texture = ExtResource("1_logo")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LanguageContainer" type="HBoxContainer" parent="UI/StartMenu/VBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 20
+
+[node name="BtnRU" type="Button" parent="UI/StartMenu/VBox/LanguageContainer"]
+custom_minimum_size = Vector2(100, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Русский"
+
+[node name="BtnZH" type="Button" parent="UI/StartMenu/VBox/LanguageContainer"]
+custom_minimum_size = Vector2(100, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "中文"
 
 [node name="SubTitle" type="Label" parent="UI/StartMenu/VBox"]
 layout_mode = 2

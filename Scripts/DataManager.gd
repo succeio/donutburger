@@ -10,27 +10,27 @@ enum Rarity {
 
 const RARITY_INFO = {
 	Rarity.COMMON: {
-		"name": "Common",
+		"name": "RARITY_COMMON",
 		"color": Color(0.8, 0.8, 0.8),
 		"value": 10
 	},
 	Rarity.RARE: {
-		"name": "Rare",
+		"name": "RARITY_RARE",
 		"color": Color(0.1, 0.8, 0.1),
 		"value": 50
 	},
 	Rarity.UNIQUE: {
-		"name": "Unique",
+		"name": "RARITY_UNIQUE",
 		"color": Color(0.1, 0.5, 0.9),
 		"value": 250
 	},
 	Rarity.EPIC: {
-		"name": "Epic",
+		"name": "RARITY_EPIC",
 		"color": Color(0.6, 0.1, 0.9),
 		"value": 1200
 	},
 	Rarity.LEGENDARY: {
-		"name": "Legendary",
+		"name": "RARITY_LEGENDARY",
 		"color": Color(0.9, 0.6, 0.0),
 		"value": 6000
 	}
@@ -39,91 +39,91 @@ const RARITY_INFO = {
 var foods = {
 	# COMMON
 	"apple": {
-		"name": "Apple",
+		"name": "FOOD_apple",
 		"rarity": Rarity.COMMON,
 		"preview": "res://Previews/apple.png",
 		"model": "res://Models/OBJ format/apple.obj"
 	},
 	"banana": {
-		"name": "Banana",
+		"name": "FOOD_banana",
 		"rarity": Rarity.COMMON,
 		"preview": "res://Previews/banana.png",
 		"model": "res://Models/OBJ format/banana.obj"
 	},
 	"orange": {
-		"name": "Orange",
+		"name": "FOOD_orange",
 		"rarity": Rarity.COMMON,
 		"preview": "res://Previews/orange.png",
 		"model": "res://Models/OBJ format/orange.obj"
 	},
 	"strawberry": {
-		"name": "Strawberry",
+		"name": "FOOD_strawberry",
 		"rarity": Rarity.COMMON,
 		"preview": "res://Previews/strawberry.png",
 		"model": "res://Models/OBJ format/strawberry.obj"
 	},
 	"bread": {
-		"name": "Bread",
+		"name": "FOOD_bread",
 		"rarity": Rarity.COMMON,
 		"preview": "res://Previews/bread.png",
 		"model": "res://Models/OBJ format/bread.obj"
 	},
 	"cheese": {
-		"name": "Cheese",
+		"name": "FOOD_cheese",
 		"rarity": Rarity.COMMON,
 		"preview": "res://Previews/cheese.png",
 		"model": "res://Models/OBJ format/cheese.obj"
 	},
 	"tomato": {
-		"name": "Tomato",
+		"name": "FOOD_tomato",
 		"rarity": Rarity.COMMON,
 		"preview": "res://Previews/tomato.png",
 		"model": "res://Models/OBJ format/tomato.obj"
 	},
 	"bacon": {
-		"name": "Bacon",
+		"name": "FOOD_bacon",
 		"rarity": Rarity.COMMON,
 		"preview": "res://Previews/bacon.png",
 		"model": "res://Models/OBJ format/bacon.obj"
 	},
 	"egg": {
-		"name": "Egg",
+		"name": "FOOD_egg",
 		"rarity": Rarity.COMMON,
 		"preview": "res://Previews/egg.png",
 		"model": "res://Models/OBJ format/egg.obj"
 	},
 	"soda-can": {
-		"name": "Soda Can",
+		"name": "FOOD_soda_can",
 		"rarity": Rarity.COMMON,
 		"preview": "res://Previews/soda-can.png",
 		"model": "res://Models/OBJ format/soda-can.obj"
 	},
 	"mushroom": {
-		"name": "Mushroom",
+		"name": "FOOD_mushroom",
 		"rarity": Rarity.COMMON,
 		"preview": "res://Previews/mushroom.png",
 		"model": "res://Models/OBJ format/mushroom.obj"
 	},
 	"carrot": {
-		"name": "Carrot",
+		"name": "FOOD_carrot",
 		"rarity": Rarity.COMMON,
 		"preview": "res://Previews/carrot.png",
 		"model": "res://Models/OBJ format/carrot.obj"
 	},
 	"watermelon": {
-		"name": "Watermelon",
+		"name": "FOOD_watermelon",
 		"rarity": Rarity.COMMON,
 		"preview": "res://Previews/watermelon.png",
 		"model": "res://Models/OBJ format/watermelon.obj"
 	},
 	"coconut": {
-		"name": "Coconut",
+		"name": "FOOD_coconut",
 		"rarity": Rarity.COMMON,
 		"preview": "res://Previews/coconut.png",
 		"model": "res://Models/OBJ format/coconut.obj"
 	},
 	"hot-dog-raw": {
-		"name": "Raw Sausage",
+		"name": "FOOD_hot_dog_raw",
 		"rarity": Rarity.COMMON,
 		"preview": "res://Previews/hot-dog-raw.png",
 		"model": "res://Models/OBJ format/hot-dog-raw.obj"
@@ -131,55 +131,55 @@ var foods = {
 
 	# RARE
 	"salad": {
-		"name": "Fruit Salad",
+		"name": "FOOD_salad",
 		"rarity": Rarity.RARE,
 		"preview": "res://Previews/salad.png",
 		"model": "res://Models/OBJ format/salad.obj"
 	},
 	"sandwich": {
-		"name": "Cheese Sandwich",
+		"name": "FOOD_sandwich",
 		"rarity": Rarity.RARE,
 		"preview": "res://Previews/sandwich.png",
 		"model": "res://Models/OBJ format/sandwich.obj"
 	},
 	"egg-cooked": {
-		"name": "Fried Egg & Bacon",
+		"name": "FOOD_egg_cooked",
 		"rarity": Rarity.RARE,
 		"preview": "res://Previews/egg-cooked.png",
 		"model": "res://Models/OBJ format/egg-cooked.obj"
 	},
 	"fries": {
-		"name": "French Fries",
+		"name": "FOOD_fries",
 		"rarity": Rarity.RARE,
 		"preview": "res://Previews/fries.png",
 		"model": "res://Models/OBJ format/fries.obj"
 	},
 	"donut": {
-		"name": "Glazed Donut",
+		"name": "FOOD_donut",
 		"rarity": Rarity.RARE,
 		"preview": "res://Previews/donut.png",
 		"model": "res://Models/OBJ format/donut.obj"
 	},
 	"cookie": {
-		"name": "Cookie",
+		"name": "FOOD_cookie",
 		"rarity": Rarity.RARE,
 		"preview": "res://Previews/cookie.png",
 		"model": "res://Models/OBJ format/cookie.obj"
 	},
 	"cup-coffee": {
-		"name": "Coffee Cup",
+		"name": "FOOD_cup_coffee",
 		"rarity": Rarity.RARE,
 		"preview": "res://Previews/cup-coffee.png",
 		"model": "res://Models/OBJ format/cup-coffee.obj"
 	},
 	"taco": {
-		"name": "Taco",
+		"name": "FOOD_taco",
 		"rarity": Rarity.RARE,
 		"preview": "res://Previews/taco.png",
 		"model": "res://Models/OBJ format/taco.obj"
 	},
 	"hot-dog": {
-		"name": "Hot Dog",
+		"name": "FOOD_hot_dog",
 		"rarity": Rarity.RARE,
 		"preview": "res://Previews/hot-dog.png",
 		"model": "res://Models/OBJ format/hot-dog.obj"
@@ -187,192 +187,131 @@ var foods = {
 
 	# UNIQUE
 	"burger": {
-		"name": "Classic Burger",
+		"name": "FOOD_burger",
 		"rarity": Rarity.UNIQUE,
 		"preview": "res://Previews/burger.png",
 		"model": "res://Models/OBJ format/burger.obj"
 	},
-	"donut-sprinkles": {
-		"name": "Sprinkled Donut",
-		"rarity": Rarity.UNIQUE,
-		"preview": "res://Previews/donut-sprinkles.png",
-		"model": "res://Models/OBJ format/donut-sprinkles.obj"
-	},
-	"sundae": {
-		"name": "Ice Cream Sundae",
-		"rarity": Rarity.UNIQUE,
-		"preview": "res://Previews/sundae.png",
-		"model": "res://Models/OBJ format/sundae.obj"
-	},
 	"pizza": {
-		"name": "Pepperoni Pizza",
+		"name": "FOOD_pizza",
 		"rarity": Rarity.UNIQUE,
 		"preview": "res://Previews/pizza.png",
 		"model": "res://Models/OBJ format/pizza.obj"
 	},
-	"muffin": {
-		"name": "Muffin",
-		"rarity": Rarity.UNIQUE,
-		"preview": "res://Previews/muffin.png",
-		"model": "res://Models/OBJ format/muffin.obj"
-	},
-	"waffle": {
-		"name": "Sweet Waffle",
-		"rarity": Rarity.UNIQUE,
-		"preview": "res://Previews/waffle.png",
-		"model": "res://Models/OBJ format/waffle.obj"
-	},
-
-	# EPIC
-	"burger-cheese-double": {
-		"name": "Double Cheese Burger",
-		"rarity": Rarity.EPIC,
-		"preview": "res://Previews/burger-cheese-double.png",
-		"model": "res://Models/OBJ format/burger-cheese-double.obj"
-	},
-	"cake": {
-		"name": "Strawberry Cake",
-		"rarity": Rarity.EPIC,
-		"preview": "res://Previews/cake.png",
-		"model": "res://Models/OBJ format/cake.obj"
-	},
 	"pie": {
-		"name": "Homemade Pie",
-		"rarity": Rarity.EPIC,
+		"name": "FOOD_pie",
+		"rarity": Rarity.UNIQUE,
 		"preview": "res://Previews/pie.png",
 		"model": "res://Models/OBJ format/pie.obj"
 	},
 
+	# EPIC
+	"icecream": {
+		"name": "FOOD_icecream",
+		"rarity": Rarity.EPIC,
+		"preview": "res://Previews/ice-cream.png",
+		"model": "res://Models/OBJ format/ice-cream.obj"
+	},
+	"cake": {
+		"name": "FOOD_cake",
+		"rarity": Rarity.EPIC,
+		"preview": "res://Previews/cake.png",
+		"model": "res://Models/OBJ format/cake.obj"
+	},
+	"chef-special": {
+		"name": "FOOD_chef_special",
+		"rarity": Rarity.EPIC,
+		"preview": "res://Previews/sushi-salmon.png",
+		"model": "res://Models/OBJ format/sushi-salmon.obj"
+	},
+
 	# LEGENDARY
-	"cake-birthday": {
-		"name": "Grand Birthday Feast",
+	"royal-burger": {
+		"name": "FOOD_royal_burger",
+		"rarity": Rarity.LEGENDARY,
+		"preview": "res://Previews/burger-cheese-double.png",
+		"model": "res://Models/OBJ format/burger-cheese-double.obj"
+	},
+	"mega-feast": {
+		"name": "FOOD_mega_feast",
+		"rarity": Rarity.LEGENDARY,
+		"preview": "res://Previews/turkey.png",
+		"model": "res://Models/OBJ format/turkey.obj"
+	},
+	"elixir": {
+		"name": "FOOD_elixir",
+		"rarity": Rarity.LEGENDARY,
+		"preview": "res://Previews/wine-red.png",
+		"model": "res://Models/OBJ format/wine-red.obj"
+	},
+	"ambrosia": {
+		"name": "FOOD_ambrosia",
 		"rarity": Rarity.LEGENDARY,
 		"preview": "res://Previews/cake-birthday.png",
 		"model": "res://Models/OBJ format/cake-birthday.obj"
 	}
 }
 
-# Auto-generation helper for 3x upgrade combinations
-# If we have 3 identical products, upgrading them returns a recipe.
-# Handled dynamically in game code. But we still define the cross-product combinations.
-var recipes = [
-	# COMMON -> RARE (2 ingredients)
-	{
-		"inputs": ["apple", "banana"],
-		"output": "salad"
-	},
-	{
-		"inputs": ["bread", "cheese"],
-		"output": "sandwich"
-	},
-	{
-		"inputs": ["tomato", "egg"],
-		"output": "egg-cooked"
-	},
-	{
-		"inputs": ["orange", "soda-can"],
-		"output": "fries"
-	},
-	{
-		"inputs": ["orange", "strawberry"],
-		"output": "donut"
-	},
-	{
-		"inputs": ["bread", "strawberry"],
-		"output": "cookie"
-	},
-	{
-		"inputs": ["mushroom", "coconut"],
-		"output": "cup-coffee"
-	},
-	{
-		"inputs": ["tomato", "carrot"],
-		"output": "taco"
-	},
-	{
-		"inputs": ["bread", "hot-dog-raw"],
-		"output": "hot-dog"
-	},
+var recipes = [] # Parsed recipes for quick iteration
 
-	# RARE -> UNIQUE (2 ingredients)
-	{
-		"inputs": ["sandwich", "fries"],
-		"output": "burger"
-	},
-	{
-		"inputs": ["donut", "strawberry"],
-		"output": "donut-sprinkles"
-	},
-	{
-		"inputs": ["egg-cooked", "banana"],
-		"output": "sundae"
-	},
-	{
-		"inputs": ["sandwich", "tomato"],
-		"output": "pizza"
-	},
-	{
-		"inputs": ["cookie", "cup-coffee"],
-		"output": "muffin"
-	},
-	{
-		"inputs": ["donut", "cookie"],
-		"output": "waffle"
-	},
+const RECIPES_DICT = {
+	# RARE
+	"salad": ["apple", "banana"],
+	"sandwich": ["bread", "cheese"],
+	"egg-cooked": ["egg", "bacon"],
+	"fries": ["tomato", "carrot"],
+	"donut": ["strawberry", "coconut"],
+	"cookie": ["egg", "coconut"],
+	"cup-coffee": ["soda-can", "mushroom"],
+	"taco": ["cheese", "tomato"],
+	"hot-dog": ["hot-dog-raw", "bread"],
 
-	# UNIQUE -> EPIC (2 ingredients)
-	{
-		"inputs": ["burger", "cheese"],
-		"output": "burger-cheese-double"
-	},
-	{
-		"inputs": ["donut-sprinkles", "sundae"],
-		"output": "cake"
-	},
-	{
-		"inputs": ["waffle", "muffin"],
-		"output": "pie"
-	},
+	# UNIQUE
+	"burger": ["sandwich", "egg-cooked"],
+	"pizza": ["cheese", "bread"],
+	"pie": ["apple", "bread"],
 
-	# EPIC -> LEGENDARY (2 ingredients)
-	{
-		"inputs": ["burger-cheese-double", "cake"],
-		"output": "cake-birthday"
-	},
-	{
-		"inputs": ["pie", "cake"],
-		"output": "cake-birthday"
-	}
-]
+	# EPIC
+	"icecream": ["salad", "donut"],
+	"cake": ["cookie", "cup-coffee"],
+	"chef-special": ["taco", "fries"],
 
-# Upgrades a single food ID to a random food of next tier (used for 3 identical items upgrade)
+	# LEGENDARY
+	"royal-burger": ["burger", "pizza"],
+	"mega-feast": ["pie", "chef-special"],
+	"elixir": ["cake", "icecream"],
+	"ambrosia": ["royal-burger", "mega-feast"]
+}
+
+func _ready() -> void:
+	# Parse RECIPES dictionary into array format: [{"inputs": [in1, in2], "output": out}]
+	for output in RECIPES_DICT:
+		var inputs = RECIPES_DICT[output]
+		recipes.append({
+			"inputs": inputs,
+			"output": output
+		})
+
 func get_next_tier_food(food_id: String) -> String:
 	if not foods.has(food_id):
 		return ""
 	var current_rarity = foods[food_id]["rarity"]
 	if current_rarity == Rarity.LEGENDARY:
-		return ""
+		return "" # Already max tier
 		
 	var next_rarity = current_rarity + 1
-	var possibilities = []
-	for id in foods:
-		if foods[id]["rarity"] == next_rarity:
-			possibilities.append(id)
+	var candidates = []
+	for fid in foods:
+		if foods[fid]["rarity"] == next_rarity:
+			candidates.append(fid)
 			
-	if possibilities.size() > 0:
-		return possibilities[randi() % possibilities.size()]
+	if candidates.size() > 0:
+		return candidates[randi() % candidates.size()]
 	return ""
 
-# Finds if there is a recipe matching the given two inputs.
-# Returns output food ID or empty string.
-func find_recipe(input1: String, input2: String) -> String:
-	var sorted_inputs = [input1, input2]
-	sorted_inputs.sort()
-	
-	for recipe in recipes:
-		var recipe_inputs = recipe["inputs"].duplicate()
-		recipe_inputs.sort()
-		if sorted_inputs == recipe_inputs:
-			return recipe["output"]
-			
+func find_recipe(in1: String, in2: String) -> String:
+	for out in RECIPES_DICT:
+		var inputs = RECIPES_DICT[out]
+		if (inputs[0] == in1 and inputs[1] == in2) or (inputs[0] == in2 and inputs[1] == in1):
+			return out
 	return ""

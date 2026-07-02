@@ -2,11 +2,16 @@ extends Node3D
 
 @onready var start_menu = $UI/StartMenu
 @onready var play_button = $UI/StartMenu/VBox/PlayButton
+@onready var btn_ru = $UI/StartMenu/VBox/LanguageContainer/BtnRU
+@onready var btn_zh = $UI/StartMenu/VBox/LanguageContainer/BtnZH
 @onready var recipe_list = $UI/MainLayout/LeftPanel/VBox/Scroll/RecipeList
 @onready var inventory_grid = $UI/MainLayout/RightPanel/VBox/Scroll/InventoryGrid
+@onready var left_panel_title = $UI/MainLayout/LeftPanel/VBox/Title
+@onready var right_panel_title = $UI/MainLayout/RightPanel/VBox/InventoryTitle
 @onready var time_label = $UI/MainLayout/RightPanel/VBox/StatusContainer/TimeLabel
 @onready var roll_button = $UI/MainLayout/RightPanel/VBox/BottomControls/RollButton
 @onready var game_over_overlay = $UI/GameOverOverlay
+@onready var game_over_title = $UI/GameOverOverlay/VBox/Title
 @onready var score_label = $UI/GameOverOverlay/VBox/ScoreLabel
 @onready var restart_button = $UI/GameOverOverlay/VBox/RestartButton
 @onready var food_pivot = $FoodPivot
@@ -31,30 +36,22 @@ func _ready() -> void:
 	restart_button.pressed.connect(_on_restart_pressed)
 	play_button.pressed.connect(_on_play_pressed)
 	
+	btn_ru.pressed.connect(func(): LocManager.set_language("ru"))
+	btn_zh.pressed.connect(func(): LocManager.set_language("zh"))
+	
 	_setup_popup_ui()
 	
 	# Start in menu mode, display random rotating food
 	menu_mode = true
 	start_menu.visible = true
 	_setup_start_menu_visuals()
+	_update_localization()
 	_show_random_menu_food()
 
 func _setup_start_menu_visuals() -> void:
 	# Add beautiful text outline, colors and styling to Start Menu
-	var title_lbl = $UI/StartMenu/VBox/Title
 	var subtitle_lbl = $UI/StartMenu/VBox/SubTitle
 	var play_btn = $UI/StartMenu/VBox/PlayButton
-	
-	# Title styling: Orange Burger-styled 3D-bulging text
-	title_lbl.add_theme_color_override("font_color", Color(0.95, 0.45, 0.05, 1.0)) # Tasty burger orange
-	title_lbl.add_theme_color_override("font_outline_color", Color(0.2, 0.08, 0.0, 1.0)) # Deep bun brown outline
-	title_lbl.add_theme_constant_override("outline_size", 22)
-	
-	# Add a shadow overlay offset inside label theme (simulating 3D bulge/extrusion)
-	title_lbl.add_theme_color_override("font_shadow_color", Color(0.12, 0.04, 0.0, 0.95))
-	title_lbl.add_theme_constant_override("shadow_offset_x", 8)
-	title_lbl.add_theme_constant_override("shadow_offset_y", 8)
-	title_lbl.add_theme_constant_override("shadow_outline_size", 14)
 	
 	# Subtitle styling
 	subtitle_lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 0.95))
@@ -121,14 +118,14 @@ func _show_random_menu_food() -> void:
 				# Scale based on bounds
 				var aabb = mesh.get_aabb()
 				var max_size = max(aabb.size.x, max(aabb.size.y, aabb.size.z))
-				var target_scale = 1.2 / (max_size if max_size > 0.001 else 1.0)
+				var target_scale = 1.2 / (max_size if max_size > 0.001 else 0.12)
 				mesh_instance.scale = Vector3(target_scale, target_scale, target_scale)
 				
 				# Position relative to camera view
 				var target_pos = Vector3(x_slot * 1.5, y_slot * 1.5, -2.0)
 				# Offset slightly to center mesh pivot
-				var offset_pivot = -aabb.position - (aabb.size / 2.0)
-				mesh_instance.position = target_pos + (offset_pivot * target_scale)
+				var offset_pivot = (-aabb.position - (aabb.size / 2.0)) * target_scale
+				mesh_instance.position = target_pos + offset_pivot
 				
 				# Give random starting rotation
 				mesh_instance.rotation_degrees = Vector3(
@@ -250,14 +247,16 @@ func trigger_combine_popup(food_id: String) -> void:
 		return
 		
 	var data = DataManager.foods[food_id]
-	popup_label.text = data["name"]
+	popup_label.text = LocManager.translate_key(data["name"])
 	popup_texture.texture = load(data["preview"])
 	
 	var rarity_color = DataManager.RARITY_INFO[data["rarity"]]["color"]
 	
 	# Match congrats text to item quality name (e.g. "RARE ITEM FOUND!")
 	var congrats_label = popup_panel.get_child(0).get_child(0) as Label
-	congrats_label.text = "%s ITEM FOUND!" % DataManager.RARITY_INFO[data["rarity"]]["name"].to_upper()
+	var rarity_name_key = DataManager.RARITY_INFO[data["rarity"]]["name"]
+	var rarity_translated = LocManager.translate_key(rarity_name_key).to_upper()
+	congrats_label.text = LocManager.translate_key("POPUP_FOUND", rarity_translated)
 	congrats_label.add_theme_color_override("font_color", rarity_color)
 	
 	# Set border color to product rarity color
@@ -349,7 +348,6 @@ func _populate_recipes_ui() -> void:
 		
 		var food_data = DataManager.foods[upgrade["inputs"][0]]
 		
-		# Draw "3x [Food]"
 		var label_3x = Label.new()
 		label_3x.text = "3x "
 		label_3x.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -360,7 +358,7 @@ func _populate_recipes_ui() -> void:
 		in_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		in_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		in_rect.texture = load(food_data["preview"])
-		in_rect.tooltip_text = food_data["name"]
+		in_rect.tooltip_text = LocManager.translate_key(food_data["name"])
 		
 		var arrow = Label.new()
 		arrow.text = " -> "
@@ -375,7 +373,7 @@ func _populate_recipes_ui() -> void:
 		out_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		out_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		out_rect.texture = load(out_data["preview"])
-		out_rect.tooltip_text = out_data["name"] + " (Random next-tier)"
+		out_rect.tooltip_text = LocManager.translate_key(out_data["name"]) + " (Random next-tier)"
 		
 		var panel = PanelContainer.new()
 		var sb = StyleBoxFlat.new()
@@ -408,7 +406,7 @@ func _populate_recipes_ui() -> void:
 		in1_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		in1_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		in1_rect.texture = load(in1_data["preview"])
-		in1_rect.tooltip_text = in1_data["name"]
+		in1_rect.tooltip_text = LocManager.translate_key(in1_data["name"])
 		
 		# Plus sign
 		var plus = Label.new()
@@ -424,7 +422,7 @@ func _populate_recipes_ui() -> void:
 		in2_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		in2_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		in2_rect.texture = load(in2_data["preview"])
-		in2_rect.tooltip_text = in2_data["name"]
+		in2_rect.tooltip_text = LocManager.translate_key(in2_data["name"])
 		
 		# Arrow sign
 		var arrow = Label.new()
@@ -440,7 +438,7 @@ func _populate_recipes_ui() -> void:
 		out_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		out_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		out_rect.texture = load(out_data["preview"])
-		out_rect.tooltip_text = out_data["name"]
+		out_rect.tooltip_text = LocManager.translate_key(out_data["name"])
 		
 		# Rarity background panel or color modulation
 		var panel = PanelContainer.new()
@@ -524,9 +522,10 @@ func _update_ui() -> void:
 		button.add_child(texture_rect)
 		
 		# Tooltip
+		var rarity_name_key = DataManager.RARITY_INFO[food_data["rarity"]]["name"]
 		button.tooltip_text = "%s (%s)\nScore Value: %d" % [
-			food_data["name"],
-			DataManager.RARITY_INFO[food_data["rarity"]]["name"],
+			LocManager.translate_key(food_data["name"]),
+			LocManager.translate_key(rarity_name_key),
 			DataManager.RARITY_INFO[food_data["rarity"]]["value"]
 		]
 		
@@ -609,10 +608,10 @@ func _show_3d_food(food_id: String) -> void:
 			var target_scale = 1.6 / max_size
 			mesh_instance.scale = Vector3(target_scale, target_scale, target_scale)
 			# Center the mesh pivot based on AABB
-			mesh_instance.position = -aabb.position - (aabb.size / 2.0)
-			mesh_instance.position *= target_scale
+			mesh_instance.position = (-aabb.position - (aabb.size / 2.0)) * target_scale
 		else:
-			mesh_instance.scale = Vector3(12, 12, 12)
+			# Fallback size and scale normalization for models that might not report valid aabb immediately
+			mesh_instance.scale = Vector3(10.0, 10.0, 10.0)
 			mesh_instance.position = Vector3.ZERO
 			
 		mesh_instance.rotation_degrees = Vector3(15, 0, 0)
@@ -641,14 +640,14 @@ func _process(delta: float) -> void:
 			food_3d_node.rotate_y(delta * 1.0)
 
 func _on_time_changed(seconds: int) -> void:
-	time_label.text = "Time: %ds" % seconds
+	time_label.text = LocManager.translate_key("UI_TIME", seconds)
 	if seconds <= 10:
 		time_label.add_theme_color_override("font_color", Color(1, 0.2, 0.2))
 	else:
 		time_label.remove_theme_color_override("font_color")
 
 func _on_game_over(score: int) -> void:
-	score_label.text = "Final Culinary Score: %d" % score
+	score_label.text = LocManager.translate_key("GAMEOVER_SCORE", score)
 	game_over_overlay.visible = true
 
 func _on_roll_pressed() -> void:
@@ -676,4 +675,24 @@ func _on_restart_pressed() -> void:
 	game_over_overlay.visible = false
 	menu_mode = true
 	start_menu.visible = true
+	_setup_start_menu_visuals()
+	_update_localization()
 	_show_random_menu_food()
+
+func _update_localization() -> void:
+	# Update all static text in UI based on selected language
+	var subtitle_lbl = $UI/StartMenu/VBox/SubTitle
+	var play_btn = $UI/StartMenu/VBox/PlayButton
+	
+	subtitle_lbl.text = LocManager.translate_key("MENU_SUBTITLE")
+	play_btn.text = LocManager.translate_key("MENU_PLAY")
+	
+	left_panel_title.text = LocManager.translate_key("UI_COMBINATIONS")
+	right_panel_title.text = LocManager.translate_key("UI_INGREDIENTS")
+	roll_button.text = LocManager.translate_key("UI_ROLL")
+	roll_button.tooltip_text = LocManager.translate_key("UI_ROLL_TOOLTIP")
+	
+	game_over_title.text = LocManager.translate_key("GAMEOVER_TITLE")
+	restart_button.text = LocManager.translate_key("GAMEOVER_RESTART")
+	
+	_update_ui()
