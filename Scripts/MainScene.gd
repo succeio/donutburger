@@ -32,6 +32,7 @@ func _ready() -> void:
 	GameState.time_changed.connect(_on_time_changed)
 	GameState.game_over.connect(_on_game_over)
 	GameState.food_list_updated.connect(_update_ui)
+	GameState.food_combined.connect(trigger_combine_popup)
 	
 	roll_button.pressed.connect(_on_roll_pressed)
 	restart_button.pressed.connect(_on_restart_pressed)
@@ -156,6 +157,7 @@ func _clear_menu_background_foods() -> void:
 	menu_background_foods.clear()
 
 func _on_play_pressed() -> void:
+	selected_inventory_index = -1
 	menu_mode = false
 	start_menu.visible = false
 	main_layout.visible = true
@@ -640,6 +642,7 @@ func _on_inventory_button_pressed(index: int) -> void:
 				_update_ui()
 				_show_3d_food(GameState.inventory[index])
 				AudioManager.play_sfx("res://Audio/click_002.ogg")
+				AudioManager.play_sfx("res://Audio/error_001.ogg")
 			else:
 				# Combination succeeded, list is already updated via signal
 				_clear_3d_food()
@@ -726,23 +729,12 @@ func _on_roll_pressed() -> void:
 	if not GameState.game_active:
 		return
 		
-	# Find a random common product to add
-	var commons = []
-	for id in DataManager.foods:
-		if DataManager.foods[id]["rarity"] == DataManager.Rarity.COMMON:
-			commons.append(id)
-			
-	var rand_food = commons[randi() % commons.size()]
-	GameState.inventory.append(rand_food)
-	GameState.time_left = max(0, GameState.time_left - 5)
-	GameState.emit_signal("time_changed", GameState.time_left)
-	AudioManager.play_sfx("res://Audio/switch_001.ogg")
-	GameState.emit_signal("food_list_updated")
-	
-	if GameState.time_left <= 0:
-		GameState.end_game()
+	var success = GameState.roll_ingredient()
+	if success:
+		AudioManager.play_sfx("res://Audio/switch_001.ogg")
 
 func _on_restart_pressed() -> void:
+	selected_inventory_index = -1
 	AudioManager.play_sfx("res://Audio/maximize_001.ogg")
 	game_over_overlay.visible = false
 	menu_mode = true

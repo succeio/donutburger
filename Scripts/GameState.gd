@@ -2,6 +2,7 @@ extends Node
 
 signal time_changed(seconds_left: int)
 signal game_over(score: int)
+signal food_combined(food_id: String)
 signal food_list_updated
 
 var time_limit: int = 60
@@ -13,6 +14,11 @@ var game_active: bool = false
 var inventory: Array = []
 
 func start_game() -> void:
+	# Clear old timer if any exists
+	var old_timer = get_node_or_null("GameTimer")
+	if old_timer:
+		old_timer.queue_free()
+		
 	score = 0
 	time_left = time_limit
 	inventory.clear()
@@ -62,6 +68,30 @@ func end_game() -> void:
 		
 	emit_signal("game_over", score)
 
+# Roll / Buy a random ingredient for time penalty
+func roll_ingredient() -> bool:
+	if not game_active:
+		return false
+		
+	# Find a random common product to add
+	var commons = []
+	for id in DataManager.foods:
+		if DataManager.foods[id]["rarity"] == DataManager.Rarity.COMMON:
+			commons.append(id)
+			
+	if commons.size() == 0:
+		return false
+		
+	var rand_food = commons[randi() % commons.size()]
+	inventory.append(rand_food)
+	time_left = max(0, time_left - 5)
+	emit_signal("time_changed", time_left)
+	emit_signal("food_list_updated")
+	
+	if time_left <= 0:
+		end_game()
+	return true
+
 # Combine two items by index in inventory
 func combine_items(idx1: int, idx2: int) -> bool:
 	if idx1 == idx2 or idx1 < 0 or idx2 < 0 or idx1 >= inventory.size() or idx2 >= inventory.size():
@@ -105,8 +135,7 @@ func combine_items(idx1: int, idx2: int) -> bool:
 				AudioManager.play_sfx("res://Audio/confirmation_001.ogg", 3.0)
 				# Notify UI which item was created
 				emit_signal("food_list_updated")
-				if Engine.has_meta("MainScene"):
-					Engine.get_meta("MainScene").call("trigger_combine_popup", upgrade_result)
+				emit_signal("food_combined", upgrade_result)
 				return true
 				
 	var result = DataManager.find_recipe(item1, item2)
@@ -135,8 +164,7 @@ func combine_items(idx1: int, idx2: int) -> bool:
 		AudioManager.play_sfx("res://Audio/confirmation_002.ogg", 3.0)
 		# Notify UI which item was created
 		emit_signal("food_list_updated")
-		if Engine.has_meta("MainScene"):
-			Engine.get_meta("MainScene").call("trigger_combine_popup", result)
+		emit_signal("food_combined", result)
 		return true
 		
 	return false
