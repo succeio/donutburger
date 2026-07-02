@@ -1,5 +1,7 @@
 extends Node3D
 
+@onready var start_menu = $UI/StartMenu
+@onready var play_button = $UI/StartMenu/VBox/PlayButton
 @onready var recipe_list = $UI/MainLayout/LeftPanel/VBox/Scroll/RecipeList
 @onready var inventory_grid = $UI/MainLayout/RightPanel/VBox/Scroll/InventoryGrid
 @onready var time_label = $UI/MainLayout/RightPanel/VBox/StatusContainer/TimeLabel
@@ -12,6 +14,11 @@ extends Node3D
 var selected_inventory_index: int = -1
 var food_3d_node: Node3D = null
 
+# For random menu backgrounds
+var menu_mode: bool = true
+var menu_rotation_speed: float = 0.5
+var menu_switch_timer: float = 0.0
+
 func _ready() -> void:
 	Engine.set_meta("MainScene", self)
 	GameState.time_changed.connect(_on_time_changed)
@@ -20,8 +27,67 @@ func _ready() -> void:
 	
 	roll_button.pressed.connect(_on_roll_pressed)
 	restart_button.pressed.connect(_on_restart_pressed)
+	play_button.pressed.connect(_on_play_pressed)
 	
 	_setup_popup_ui()
+	
+	# Start in menu mode, display random rotating food
+	menu_mode = true
+	start_menu.visible = true
+	_setup_start_menu_visuals()
+	_show_random_menu_food()
+
+func _setup_start_menu_visuals() -> void:
+	# Add beautiful text outline, colors and styling to Start Menu
+	var title_lbl = $UI/StartMenu/VBox/Title
+	var subtitle_lbl = $UI/StartMenu/VBox/SubTitle
+	var play_btn = $UI/StartMenu/VBox/PlayButton
+	
+	# Title styling
+	title_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2)) # bright yellow-gold
+	title_lbl.add_theme_color_override("font_outline_color", Color(0.1, 0.05, 0.0, 1.0))
+	title_lbl.add_theme_constant_override("outline_size", 16)
+	
+	# Subtitle styling
+	subtitle_lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 0.95))
+	subtitle_lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1.0))
+	subtitle_lbl.add_theme_constant_override("outline_size", 8)
+	
+	# Play Button styling
+	var btn_normal = StyleBoxFlat.new()
+	btn_normal.bg_color = Color(0.15, 0.65, 0.25) # Vibrant green
+	btn_normal.set_border_width_all(3)
+	btn_normal.border_color = Color(0.8, 1.0, 0.8)
+	btn_normal.set_corner_radius_all(12)
+	btn_normal.shadow_color = Color(0, 0, 0, 0.4)
+	btn_normal.shadow_size = 8
+	
+	var btn_hover = btn_normal.duplicate()
+	btn_hover.bg_color = Color(0.2, 0.8, 0.3) # Brighter green
+	
+	var btn_pressed = btn_normal.duplicate()
+	btn_pressed.bg_color = Color(0.1, 0.5, 0.18)
+	
+	play_btn.add_theme_stylebox_override("normal", btn_normal)
+	play_btn.add_theme_stylebox_override("hover", btn_hover)
+	play_btn.add_theme_stylebox_override("pressed", btn_pressed)
+	play_btn.add_theme_color_override("font_color", Color.WHITE)
+	play_btn.add_theme_color_override("font_outline_color", Color.BLACK)
+	play_btn.add_theme_constant_override("outline_size", 6)
+
+func _show_random_menu_food() -> void:
+	var keys = DataManager.foods.keys()
+	if keys.size() > 0:
+		var random_food = keys[randi() % keys.size()]
+		_show_3d_food(random_food)
+		# Slightly adjust speed & axis randomly
+		menu_rotation_speed = randf_range(0.3, 1.2)
+
+func _on_play_pressed() -> void:
+	menu_mode = false
+	start_menu.visible = false
+	_clear_3d_food()
+	AudioManager.play_sfx("res://Audio/maximize_001.ogg")
 	GameState.start_game()
 
 var popup_panel: PanelContainer = null
@@ -481,7 +547,14 @@ func _clear_3d_food() -> void:
 
 func _process(delta: float) -> void:
 	if food_3d_node and is_instance_valid(food_3d_node):
-		food_3d_node.rotate_y(delta * 1.0)
+		food_3d_node.rotate_y(delta * menu_rotation_speed)
+		
+	if menu_mode:
+		menu_switch_timer += delta
+		# Switch background food every 5 seconds
+		if menu_switch_timer >= 5.0:
+			menu_switch_timer = 0.0
+			_show_random_menu_food()
 
 func _on_time_changed(seconds: int) -> void:
 	time_label.text = "Time: %ds" % seconds
@@ -517,4 +590,6 @@ func _on_roll_pressed() -> void:
 func _on_restart_pressed() -> void:
 	AudioManager.play_sfx("res://Audio/maximize_001.ogg")
 	game_over_overlay.visible = false
-	GameState.start_game()
+	menu_mode = true
+	start_menu.visible = true
+	_show_random_menu_food()
