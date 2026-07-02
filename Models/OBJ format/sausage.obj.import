@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://deyyx63wno8tp"
+path="res://.godot/imported/sausage.obj-c4d1a98263eb3896b24f18879fd11962.mesh"
+
+[deps]
+
+files=["res://.godot/imported/sausage.obj-c4d1a98263eb3896b24f18879fd11962.mesh"]
+
+source_file="res://Models/OBJ format/sausage.obj"
+dest_files=["res://.godot/imported/sausage.obj-c4d1a98263eb3896b24f18879fd11962.mesh", "res://.godot/imported/sausage.obj-c4d1a98263eb3896b24f18879fd11962.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

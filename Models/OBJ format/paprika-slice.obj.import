@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://bp3e3yhw8t2r0"
+path="res://.godot/imported/paprika-slice.obj-08ba9aa26a9329107e81d795c39c5e45.mesh"
+
+[deps]
+
+files=["res://.godot/imported/paprika-slice.obj-08ba9aa26a9329107e81d795c39c5e45.mesh"]
+
+source_file="res://Models/OBJ format/paprika-slice.obj"
+dest_files=["res://.godot/imported/paprika-slice.obj-08ba9aa26a9329107e81d795c39c5e45.mesh", "res://.godot/imported/paprika-slice.obj-08ba9aa26a9329107e81d795c39c5e45.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

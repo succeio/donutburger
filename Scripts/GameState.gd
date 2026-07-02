@@ -1,0 +1,136 @@
+extends Node
+
+signal time_changed(seconds_left: int)
+signal game_over(score: int)
+signal food_list_updated
+
+var time_limit: int = 60
+var time_left: int = 60
+var score: int = 0
+var game_active: bool = false
+
+# Array of active food IDs currently owned by the user
+var inventory: Array = []
+
+func start_game() -> void:
+	score = 0
+	time_left = time_limit
+	inventory.clear()
+	
+	# Give starting common products
+	var commons = []
+	for id in DataManager.foods:
+		if DataManager.foods[id]["rarity"] == DataManager.Rarity.COMMON:
+			commons.append(id)
+			
+	# Start with 12 random commons (larger starting pool)
+	for i in range(12):
+		var rand_food = commons[randi() % commons.size()]
+		inventory.append(rand_food)
+		
+	game_active = true
+	emit_signal("food_list_updated")
+	emit_signal("time_changed", time_left)
+	
+	# Start timer
+	var timer = Timer.new()
+	timer.name = "GameTimer"
+	timer.wait_time = 1.0
+	timer.autostart = true
+	timer.timeout.connect(_on_timer_timeout)
+	add_child(timer)
+
+func _on_timer_timeout() -> void:
+	if not game_active:
+		return
+	time_left -= 1
+	emit_signal("time_changed", time_left)
+	if time_left <= 0:
+		end_game()
+
+func end_game() -> void:
+	game_active = false
+	var timer = get_node_or_null("GameTimer")
+	if timer:
+		timer.queue_free()
+		
+	# Calculate total score from inventory
+	score = 0
+	for food_id in inventory:
+		var rarity = DataManager.foods[food_id]["rarity"]
+		score += DataManager.RARITY_INFO[rarity]["value"]
+		
+	emit_signal("game_over", score)
+
+# Combine two items by index in inventory
+func combine_items(idx1: int, idx2: int) -> bool:
+	if idx1 == idx2 or idx1 < 0 or idx2 < 0 or idx1 >= inventory.size() or idx2 >= inventory.size():
+		return false
+		
+	var item1 = inventory[idx1]
+	var item2 = inventory[idx2]
+	
+	# Check if they are identical. If so, check if we have a third identical item in inventory.
+	if item1 == item2:
+		var identical_indices = []
+		for i in range(inventory.size()):
+			if inventory[i] == item1:
+				identical_indices.append(i)
+		
+		# If we have 3 or more of this identical item, combine them into 1 item of the next tier
+		if identical_indices.size() >= 3:
+			var upgrade_result = DataManager.get_next_tier_food(item1)
+			if upgrade_result != "":
+				# Sort indices descending to safely remove them from the array
+				identical_indices.sort()
+				identical_indices.reverse()
+				
+				# Remove the first 3 identical items
+				for j in range(3):
+					inventory.remove_at(identical_indices[j])
+				
+				inventory.append(upgrade_result)
+				
+				# Successful upgrade bonus: +10 seconds, +1 free common ingredient
+				time_left = min(time_limit, time_left + 10)
+				emit_signal("time_changed", time_left)
+				
+				var commons = []
+				for id in DataManager.foods:
+					if DataManager.foods[id]["rarity"] == DataManager.Rarity.COMMON:
+						commons.append(id)
+				if commons.size() > 0:
+					inventory.append(commons[randi() % commons.size()])
+					
+				AudioManager.play_sfx("res://Audio/confirmation_001.ogg", 3.0)
+				emit_signal("food_list_updated")
+				return true
+				
+	var result = DataManager.find_recipe(item1, item2)
+	
+	if result != "":
+		# Add combined result FIRST, so index removals don't break or access out of bounds
+		# Remove larger index first to keep lower index valid, then remove lower index.
+		var first = max(idx1, idx2)
+		var second = min(idx1, idx2)
+		inventory.remove_at(first)
+		inventory.remove_at(second)
+		
+		inventory.append(result)
+		
+		# Successful recipe combine bonus: +10 seconds, +1 free common ingredient
+		time_left = min(time_limit, time_left + 10)
+		emit_signal("time_changed", time_left)
+		
+		var commons = []
+		for id in DataManager.foods:
+			if DataManager.foods[id]["rarity"] == DataManager.Rarity.COMMON:
+				commons.append(id)
+		if commons.size() > 0:
+			inventory.append(commons[randi() % commons.size()])
+			
+		AudioManager.play_sfx("res://Audio/confirmation_002.ogg", 3.0)
+		emit_signal("food_list_updated")
+		return true
+		
+	return false
