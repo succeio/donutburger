@@ -43,6 +43,10 @@ func _ready() -> void:
 	_setup_popup_ui()
 	_setup_kitchen_scene()
 	
+	# Connect to game restart/play to clear cooked food models
+	restart_button.pressed.connect(func(): _clear_cooked_food_visuals())
+	play_button.pressed.connect(func(): _clear_cooked_food_visuals())
+	
 	# Start in menu mode, display random rotating food
 	menu_mode = true
 	main_layout.visible = false
@@ -246,9 +250,72 @@ func _setup_popup_ui() -> void:
 	# Set direct position offset to avoid top-left default alignment in CanvasLayer
 	popup_panel.position = (Vector2(1152, 648) - popup_panel.custom_minimum_size) / 2.0
 
+# Keep track of spawned food models cooked during the game
+var cooked_food_models: Array[Node3D] = []
+
+func _clear_cooked_food_visuals() -> void:
+	for node in cooked_food_models:
+		if is_instance_valid(node):
+			node.queue_free()
+	cooked_food_models.clear()
+
 func trigger_combine_popup(food_id: String) -> void:
 	if not DataManager.foods.has(food_id):
 		return
+		
+	# Add the cooked food model to the scene as a physical visual reward
+	var colormap_tex = load("res://Models/OBJ format/Textures/colormap.png")
+	var food_data = DataManager.foods[food_id]
+	var mesh = load(food_data["model"])
+	var kitchen_scene = get_node_or_null("KitchenScene")
+	if mesh and kitchen_scene:
+		var inst = MeshInstance3D.new()
+		inst.mesh = mesh
+		
+		var shader_material = ShaderMaterial.new()
+		shader_material.shader = load("res://Shaders/food_glow.gdshader")
+		if colormap_tex:
+			shader_material.set_shader_parameter("albedo_texture", colormap_tex)
+			
+		var rarity_color = DataManager.RARITY_INFO[food_data["rarity"]]["color"]
+		shader_material.set_shader_parameter("rim_color", rarity_color)
+		shader_material.set_shader_parameter("rim_intensity", 1.5)
+		shader_material.set_shader_parameter("rim_power", 3.0)
+		inst.material_override = shader_material
+		
+		var aabb = mesh.get_aabb()
+		var max_size = max(aabb.size.x, max(aabb.size.y, aabb.size.z))
+		var target_scale = 0.6 / (max_size if max_size > 0.001 else 1.0)
+		inst.scale = Vector3(target_scale, target_scale, target_scale)
+		
+		# Place randomly in the background zone (behind the cutting board: Z from -2.0 to -5.0, X from -5.0 to 5.0)
+		var offset_pivot = (-aabb.position - (aabb.size / 2.0))
+		
+		var random_x = randf_range(-5.0, 5.0)
+		var random_z = randf_range(-5.0, -2.0)
+		
+		# Calculate distance from camera/board to scale things up significantly as they get farther away
+		# Base scale grows larger when Z is deeper (more negative)
+		var distance_factor = 1.0 + (abs(random_z) - 2.0) * 0.8
+		var base_scale = 0.6 / (max_size if max_size > 0.001 else 1.0)
+		var target_scale_val = base_scale * distance_factor
+		offset_pivot *= target_scale_val
+		
+		var random_pos = Vector3(
+			random_x,
+			0.02 + (abs(random_z) - 2.0) * 0.4, # Slightly raise higher elements for layered visual
+			random_z
+		)
+		inst.position = random_pos + offset_pivot
+		inst.rotation_degrees = Vector3(0, randf_range(0, 360), 0)
+		
+		kitchen_scene.add_child(inst)
+		cooked_food_models.append(inst)
+		
+		# Add a nice popping animation scale effect
+		var spawn_tween = create_tween()
+		inst.scale = Vector3.ZERO
+		spawn_tween.tween_property(inst, "scale", Vector3(target_scale_val, target_scale_val, target_scale_val), 0.5).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
 		
 	var data = DataManager.foods[food_id]
 	popup_label.text = LocManager.translate_key(data["name"])
