@@ -4,11 +4,16 @@ signal time_changed(seconds_left: int)
 signal game_over(score: int)
 signal food_combined(food_id: String)
 signal food_list_updated
+signal level_changed(level: int, xp: int, xp_needed: int)
+signal level_rewarded(food_id: String)
 
 var time_limit: int = 60
 var time_left: int = 60
 var score: int = 0
 var game_active: bool = false
+var current_level: int = 1
+var current_xp: int = 0
+var xp_needed: int = 100
 
 # Array of active food IDs currently owned by the user
 var inventory: Array = []
@@ -22,6 +27,10 @@ func start_game() -> void:
 	score = 0
 	time_left = time_limit
 	inventory.clear()
+	current_level = 1
+	current_xp = 0
+	xp_needed = 100
+	emit_signal("level_changed", current_level, current_xp, xp_needed)
 	
 	# Give starting common products
 	var commons = []
@@ -133,6 +142,11 @@ func combine_items(idx1: int, idx2: int) -> bool:
 					inventory.append(commons[randi() % commons.size()])
 					
 				AudioManager.play_sfx("res://Audio/confirmation_001.ogg", 3.0)
+				
+				# Gain XP
+				var xp_reward = get_xp_for_food(upgrade_result)
+				gain_xp(xp_reward)
+				
 				# Notify UI which item was created
 				emit_signal("food_list_updated")
 				emit_signal("food_combined", upgrade_result)
@@ -162,9 +176,57 @@ func combine_items(idx1: int, idx2: int) -> bool:
 			inventory.append(commons[randi() % commons.size()])
 			
 		AudioManager.play_sfx("res://Audio/confirmation_002.ogg", 3.0)
+		
+		# Gain XP
+		var xp_reward = get_xp_for_food(result)
+		gain_xp(xp_reward)
+		
 		# Notify UI which item was created
 		emit_signal("food_list_updated")
 		emit_signal("food_combined", result)
 		return true
 		
 	return false
+
+func get_xp_for_food(food_id: String) -> int:
+	if not DataManager.foods.has(food_id):
+		return 0
+	var rarity = DataManager.foods[food_id]["rarity"]
+	match rarity:
+		DataManager.Rarity.COMMON: return 10
+		DataManager.Rarity.RARE: return 25
+		DataManager.Rarity.UNIQUE: return 50
+		DataManager.Rarity.EPIC: return 100
+		DataManager.Rarity.LEGENDARY: return 200
+	return 0
+
+func get_xp_needed_for_level(lvl: int) -> int:
+	return 100 + (lvl - 1) * 50
+
+func gain_xp(amount: int) -> void:
+	if not game_active:
+		return
+	current_xp += amount
+	var leveled_up = false
+	while current_xp >= xp_needed:
+		current_xp -= xp_needed
+		current_level += 1
+		xp_needed = get_xp_needed_for_level(current_level)
+		leveled_up = true
+		_on_level_up()
+	emit_signal("level_changed", current_level, current_xp, xp_needed)
+
+func _on_level_up() -> void:
+	# Add a random common ingredient
+	var commons = []
+	for id in DataManager.foods:
+		if DataManager.foods[id]["rarity"] == DataManager.Rarity.COMMON:
+			commons.append(id)
+	if commons.size() > 0:
+		var rand_food = commons[randi() % commons.size()]
+		inventory.append(rand_food)
+		# Defer signaling so UI update happens after everything is settled
+		# Also make sure to emit food_list_updated on GameState directly so other classes pick it up
+		emit_signal("food_list_updated")
+		emit_signal("level_rewarded", rand_food)
+		AudioManager.play_sfx("res://Audio/confirmation_001.ogg", 3.0)

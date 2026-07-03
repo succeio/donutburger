@@ -16,6 +16,8 @@ extends Node3D
 @onready var score_label = $UI/GameOverOverlay/VBox/ScoreLabel
 @onready var restart_button = $UI/GameOverOverlay/VBox/RestartButton
 @onready var food_pivot = $FoodPivot
+@onready var level_progress_bar = $UI/MainLayout/CenterSpace/XPProgressBar
+@onready var level_label = $UI/MainLayout/CenterSpace/LevelLabel
 
 var selected_inventory_index: int = -1
 var food_3d_node: Node3D = null
@@ -47,6 +49,9 @@ func _ready() -> void:
 	# Connect to game restart/play to clear cooked food models
 	restart_button.pressed.connect(func(): _clear_cooked_food_visuals())
 	play_button.pressed.connect(func(): _clear_cooked_food_visuals())
+	
+	GameState.level_changed.connect(_on_level_changed)
+	GameState.level_rewarded.connect(_queue_reward_popup)
 	
 	# Start in menu mode, display random rotating food
 	menu_mode = true
@@ -172,6 +177,9 @@ var popup_texture: TextureRect = null
 var popup_glow: Control = null
 var popup_tween: Tween = null
 
+var popup_queue: Array = []
+var is_displaying_popup: bool = false
+
 func _setup_popup_ui() -> void:
 	popup_panel = PanelContainer.new()
 	popup_panel.visible = false
@@ -262,105 +270,124 @@ func _clear_cooked_food_visuals() -> void:
 	cooked_food_models.clear()
 
 func trigger_combine_popup(food_id: String) -> void:
-	if not DataManager.foods.has(food_id):
+	_queue_popup({"type": "combine", "food_id": food_id})
+
+func _queue_reward_popup(food_id: String) -> void:
+	_queue_popup({"type": "reward", "food_id": food_id})
+
+func _queue_popup(info: Dictionary) -> void:
+	popup_queue.append(info)
+	if not is_displaying_popup:
+		_show_next_popup()
+
+func _show_next_popup() -> void:
+	if popup_queue.is_empty():
+		is_displaying_popup = false
 		return
 		
-	# Add the cooked food model to the scene as a physical visual reward
-	var colormap_tex = load("res://Models/OBJ format/Textures/colormap.png")
-	var food_data = DataManager.foods[food_id]
-	var mesh = load(food_data["model"])
-	var kitchen_scene = get_node_or_null("KitchenScene")
-	if mesh and kitchen_scene:
-		var inst = MeshInstance3D.new()
-		inst.mesh = mesh
+	is_displaying_popup = true
+	var current = popup_queue.pop_front()
+	var food_id = current["food_id"]
+	var is_reward = current["type"] == "reward"
+	
+	if not DataManager.foods.has(food_id):
+		_show_next_popup()
+		return
 		
-		var shader_material = ShaderMaterial.new()
-		shader_material.shader = load("res://Shaders/food_glow.gdshader")
-		if colormap_tex:
-			shader_material.set_shader_parameter("albedo_texture", colormap_tex)
+	# Add physical visual reward if it was combined
+	if current["type"] == "combine":
+		var colormap_tex = load("res://Models/OBJ format/Textures/colormap.png")
+		var food_data = DataManager.foods[food_id]
+		var mesh = load(food_data["model"])
+		var kitchen_scene = get_node_or_null("KitchenScene")
+		if mesh and kitchen_scene:
+			var inst = MeshInstance3D.new()
+			inst.mesh = mesh
 			
-		var rarity_color = DataManager.RARITY_INFO[food_data["rarity"]]["color"]
-		shader_material.set_shader_parameter("rim_color", rarity_color)
-		shader_material.set_shader_parameter("rim_intensity", 1.5)
-		shader_material.set_shader_parameter("rim_power", 3.0)
-		inst.material_override = shader_material
-		
-		var aabb = mesh.get_aabb()
-		var max_size = max(aabb.size.x, max(aabb.size.y, aabb.size.z))
-		var target_scale = 0.6 / (max_size if max_size > 0.001 else 1.0)
-		inst.scale = Vector3(target_scale, target_scale, target_scale)
-		
-		# Place randomly in the background zone (behind the cutting board: Z from -2.0 to -5.0, X from -5.0 to 5.0)
-		var offset_pivot = (-aabb.position - (aabb.size / 2.0))
-		
-		var random_x = randf_range(-5.0, 5.0)
-		var random_z = randf_range(-5.0, -2.0)
-		
-		# Calculate distance from camera/board to scale things up significantly as they get farther away
-		# Base scale grows larger when Z is deeper (more negative)
-		var distance_factor = 1.0 + (abs(random_z) - 2.0) * 0.8
-		var base_scale = 0.6 / (max_size if max_size > 0.001 else 1.0)
-		var target_scale_val = base_scale * distance_factor
-		offset_pivot *= target_scale_val
-		
-		var random_pos = Vector3(
-			random_x,
-			0.02 + (abs(random_z) - 2.0) * 0.4, # Slightly raise higher elements for layered visual
-			random_z
-		)
-		inst.position = random_pos + offset_pivot
-		inst.rotation_degrees = Vector3(0, randf_range(0, 360), 0)
-		
-		kitchen_scene.add_child(inst)
-		cooked_food_models.append(inst)
-		
-		# Add a nice popping animation scale effect
-		var spawn_tween = create_tween()
-		inst.scale = Vector3.ZERO
-		spawn_tween.tween_property(inst, "scale", Vector3(target_scale_val, target_scale_val, target_scale_val), 0.5).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
-		
+			var shader_material = ShaderMaterial.new()
+			shader_material.shader = load("res://Shaders/food_glow.gdshader")
+			if colormap_tex:
+				shader_material.set_shader_parameter("albedo_texture", colormap_tex)
+				
+			var rarity_color = DataManager.RARITY_INFO[food_data["rarity"]]["color"]
+			shader_material.set_shader_parameter("rim_color", rarity_color)
+			shader_material.set_shader_parameter("rim_intensity", 1.5)
+			shader_material.set_shader_parameter("rim_power", 3.0)
+			inst.material_override = shader_material
+			
+			var aabb = mesh.get_aabb()
+			var max_size = max(aabb.size.x, max(aabb.size.y, aabb.size.z))
+			var target_scale = 0.6 / (max_size if max_size > 0.001 else 1.0)
+			inst.scale = Vector3(target_scale, target_scale, target_scale)
+			
+			var offset_pivot = (-aabb.position - (aabb.size / 2.0))
+			var random_x = randf_range(-5.0, 5.0)
+			var random_z = randf_range(-5.0, -2.0)
+			var distance_factor = 1.0 + (abs(random_z) - 2.0) * 0.8
+			var base_scale = 0.6 / (max_size if max_size > 0.001 else 1.0)
+			var target_scale_val = base_scale * distance_factor
+			offset_pivot *= target_scale_val
+			
+			var random_pos = Vector3(
+				random_x,
+				0.02 + (abs(random_z) - 2.0) * 0.4,
+				random_z
+			)
+			inst.position = random_pos + offset_pivot
+			inst.rotation_degrees = Vector3(0, randf_range(0, 360), 0)
+			
+			kitchen_scene.add_child(inst)
+			cooked_food_models.append(inst)
+			
+			var spawn_tween = create_tween()
+			inst.scale = Vector3.ZERO
+			spawn_tween.tween_property(inst, "scale", Vector3(target_scale_val, target_scale_val, target_scale_val), 0.5).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+			
 	var data = DataManager.foods[food_id]
 	popup_label.text = LocManager.translate_key(data["name"])
 	popup_texture.texture = load(data["preview"])
 	
-	var rarity_color = DataManager.RARITY_INFO[data["rarity"]]["color"]
+	# Determine if we should treat it as level reward, but make sure quality is not above Green (RARE/COMMON)
+	var final_rarity = data["rarity"]
+	# Limit color to green (RARE) or gray (COMMON)
+	if final_rarity > DataManager.Rarity.RARE:
+		final_rarity = DataManager.Rarity.RARE
+		
+	var rarity_color = DataManager.RARITY_INFO[final_rarity]["color"]
 	
-	# Match congrats text to item quality name (e.g. "RARE ITEM FOUND!")
+	# Match congrats text
 	var congrats_label = popup_panel.get_child(0).get_child(0) as Label
-	var rarity_name_key = DataManager.RARITY_INFO[data["rarity"]]["name"]
-	var rarity_translated = LocManager.translate_key(rarity_name_key).to_upper()
-	congrats_label.text = LocManager.translate_key("POPUP_FOUND", rarity_translated)
-	congrats_label.add_theme_color_override("font_color", rarity_color)
+	if is_reward:
+		congrats_label.text = LocManager.translate_key("POPUP_LEVEL_UP")
+		congrats_label.add_theme_color_override("font_color", Color(0.1, 0.8, 0.1)) # Pure Green
+	else:
+		var rarity_name_key = DataManager.RARITY_INFO[data["rarity"]]["name"]
+		var rarity_translated = LocManager.translate_key(rarity_name_key).to_upper()
+		congrats_label.text = LocManager.translate_key("POPUP_FOUND", rarity_translated)
+		congrats_label.add_theme_color_override("font_color", rarity_color)
 	
-	# Set border color to product rarity color
 	var sb = popup_panel.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
-	sb.border_color = rarity_color
-	# Border width is thicker for TF2 style
+	sb.border_color = Color(0.1, 0.8, 0.1) if is_reward else rarity_color
 	sb.set_border_width_all(5)
 	popup_panel.add_theme_stylebox_override("panel", sb)
 	
-	# TF2 Style Gold/Rarity Spotlight Glow Effect
 	var glow_sb = popup_glow.get_child(0).get_theme_stylebox("panel").duplicate() as StyleBoxFlat
-	# The inner core is soft gold light, the outer massive glow matches the item quality
-	glow_sb.bg_color = Color(1.0, 0.85, 0.3, 0.15)
-	glow_sb.shadow_color = rarity_color
+	glow_sb.bg_color = Color(0.1, 0.8, 0.1, 0.15) if is_reward else Color(1.0, 0.85, 0.3, 0.15)
+	glow_sb.shadow_color = Color(0.1, 0.8, 0.1) if is_reward else rarity_color
 	glow_sb.shadow_color.a = 0.95
 	glow_sb.shadow_size = 18
 	popup_glow.get_child(0).add_theme_stylebox_override("panel", glow_sb)
 	
-	popup_label.add_theme_color_override("font_color", rarity_color)
+	popup_label.add_theme_color_override("font_color", Color(0.1, 0.8, 0.1) if is_reward else rarity_color)
 	
 	popup_panel.visible = true
-	# Ensure size calculation is done and anchor positioning updates before calculating pivot
 	popup_panel.set_anchors_preset(Control.PRESET_CENTER)
 	popup_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	popup_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 	
-	# Update positions dynamically based on viewport/screen size
 	var viewport_size = popup_panel.get_viewport_rect().size
 	popup_panel.position = (viewport_size - popup_panel.custom_minimum_size) / 2.0
 	
-	# Setting scale to Vector2.ZERO or near zero, then updating pivot dynamically
 	popup_panel.scale = Vector2(0.1, 0.1)
 	popup_panel.pivot_offset = popup_panel.custom_minimum_size / 2.0
 	
@@ -369,11 +396,13 @@ func trigger_combine_popup(food_id: String) -> void:
 		
 	popup_tween = create_tween()
 	popup_tween.set_parallel(false)
-	# Fast pop-up with a bouncy elastic animation like TF2 loot unbox, then holding
 	popup_tween.tween_property(popup_panel, "scale", Vector2(1.0, 1.0), 0.4).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
 	popup_tween.tween_interval(1.5)
 	popup_tween.tween_property(popup_panel, "scale", Vector2(0.0, 0.0), 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	popup_tween.tween_callback(func(): popup_panel.visible = false)
+	popup_tween.tween_callback(func():
+		popup_panel.visible = false
+		_show_next_popup()
+	)
 
 func _populate_recipes_ui() -> void:
 	for child in recipe_list.get_children():
@@ -720,6 +749,11 @@ func _on_time_changed(seconds: int) -> void:
 	else:
 		time_label.remove_theme_color_override("font_color")
 
+func _on_level_changed(level: int, xp: int, xp_needed: int) -> void:
+	level_label.text = LocManager.translate_key("UI_LEVEL", level)
+	level_progress_bar.max_value = xp_needed
+	level_progress_bar.value = xp
+
 func _on_game_over(score: int) -> void:
 	score_label.text = LocManager.translate_key("GAMEOVER_SCORE", score)
 	main_layout.visible = false
@@ -755,6 +789,8 @@ func _update_localization() -> void:
 	right_panel_title.text = LocManager.translate_key("UI_INGREDIENTS")
 	roll_button.text = LocManager.translate_key("UI_ROLL")
 	roll_button.tooltip_text = LocManager.translate_key("UI_ROLL_TOOLTIP")
+	
+	level_label.text = LocManager.translate_key("UI_LEVEL", GameState.current_level)
 	
 	game_over_title.text = LocManager.translate_key("GAMEOVER_TITLE")
 	restart_button.text = LocManager.translate_key("GAMEOVER_RESTART")
