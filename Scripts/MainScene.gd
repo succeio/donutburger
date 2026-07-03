@@ -18,6 +18,9 @@ extends Node3D
 @onready var food_pivot = $FoodPivot
 @onready var level_progress_bar = $UI/MainLayout/CenterSpace/XPProgressBar
 @onready var level_label = $UI/MainLayout/CenterSpace/LevelLabel
+@onready var upgrade_overlay = $UI/UpgradeOverlay
+@onready var upgrade_cards_container = $UI/UpgradeOverlay/VBox/CardsContainer
+@onready var upgrade_title = $UI/UpgradeOverlay/VBox/Title
 
 var selected_inventory_index: int = -1
 var food_3d_node: Node3D = null
@@ -52,6 +55,7 @@ func _ready() -> void:
 	
 	GameState.level_changed.connect(_on_level_changed)
 	GameState.level_rewarded.connect(_queue_reward_popup)
+	GameState.level_up_pending.connect(_on_level_up_pending)
 	
 	# Start in menu mode, display random rotating food
 	menu_mode = true
@@ -754,6 +758,77 @@ func _on_level_changed(level: int, xp: int, xp_needed: int) -> void:
 	level_progress_bar.max_value = xp_needed
 	level_progress_bar.value = xp
 
+func _on_level_up_pending(options: Array) -> void:
+	# Clear old cards
+	for child in upgrade_cards_container.get_children():
+		child.queue_free()
+		
+	upgrade_overlay.visible = true
+	
+	# Create a TF2-styled card for each option
+	for upgrade_key in options:
+		var card = PanelContainer.new()
+		card.custom_minimum_size = Vector2(180, 240)
+		
+		# Stylish Panel look
+		var sb = StyleBoxFlat.new()
+		sb.bg_color = Color(0.12, 0.12, 0.16, 0.95)
+		sb.border_color = Color(0.1, 0.8, 0.1) # Cool green quality
+		sb.set_border_width_all(3)
+		sb.set_corner_radius_all(10)
+		sb.shadow_color = Color(0, 0, 0, 0.5)
+		sb.shadow_size = 6
+		card.add_theme_stylebox_override("panel", sb)
+		
+		var vbox = VBoxContainer.new()
+		vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+		vbox.add_theme_constant_override("separation", 15)
+		
+		# Upgrade name
+		var name_lbl = Label.new()
+		name_lbl.text = LocManager.translate_key(GameState.UPGRADES[upgrade_key]["name"])
+		name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		name_lbl.add_theme_font_size_override("font_size", 18)
+		name_lbl.add_theme_color_override("font_color", Color(0.8, 1.0, 0.8))
+		vbox.add_child(name_lbl)
+		
+		# Upgrade description
+		var desc_lbl = Label.new()
+		desc_lbl.text = LocManager.translate_key(GameState.UPGRADES[upgrade_key]["desc"])
+		desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		desc_lbl.add_theme_font_size_override("font_size", 13)
+		desc_lbl.add_theme_color_override("font_color", Color(0.65, 0.65, 0.7))
+		vbox.add_child(desc_lbl)
+		
+		# Select button
+		var select_btn = Button.new()
+		select_btn.text = "SELECT"
+		select_btn.custom_minimum_size = Vector2(100, 35)
+		select_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		
+		# TF2 green style
+		var btn_style = StyleBoxFlat.new()
+		btn_style.bg_color = Color(0.15, 0.65, 0.25)
+		btn_style.set_corner_radius_all(6)
+		select_btn.add_theme_stylebox_override("normal", btn_style)
+		
+		var btn_style_hover = btn_style.duplicate()
+		btn_style_hover.bg_color = Color(0.2, 0.8, 0.3)
+		select_btn.add_theme_stylebox_override("hover", btn_style_hover)
+		
+		# Bind click logic
+		select_btn.pressed.connect(func():
+			GameState.select_upgrade(upgrade_key)
+			upgrade_overlay.visible = false
+			AudioManager.play_sfx("res://Audio/maximize_001.ogg")
+		)
+		
+		vbox.add_child(select_btn)
+		card.add_child(vbox)
+		upgrade_cards_container.add_child(card)
+
 func _on_game_over(score: int) -> void:
 	score_label.text = LocManager.translate_key("GAMEOVER_SCORE", score)
 	main_layout.visible = false
@@ -794,6 +869,8 @@ func _update_localization() -> void:
 	
 	game_over_title.text = LocManager.translate_key("GAMEOVER_TITLE")
 	restart_button.text = LocManager.translate_key("GAMEOVER_RESTART")
+	
+	upgrade_title.text = LocManager.translate_key("UI_SELECT_UPGRADE")
 	
 	_update_ui()
 

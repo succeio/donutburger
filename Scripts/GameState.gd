@@ -6,6 +6,7 @@ signal food_combined(food_id: String)
 signal food_list_updated
 signal level_changed(level: int, xp: int, xp_needed: int)
 signal level_rewarded(food_id: String)
+signal level_up_pending(options: Array)
 
 var time_limit: int = 60
 var time_left: int = 60
@@ -13,7 +14,32 @@ var score: int = 0
 var game_active: bool = false
 var current_level: int = 1
 var current_xp: int = 0
-var xp_needed: int = 100
+var xp_needed: int = 30 # Levels are gained much faster now
+
+# Upgrade system state
+var extra_craft_chance: float = 0.0 # Chance to get an extra common ingredient during craft/upgrade
+var refund_chance: float = 0.0 # Chance to refund one of the spent ingredients
+var xp_multiplier: float = 1.0 # XP Gain multiplier
+
+# Upgrade database
+var UPGRADES = {
+	"time_limit": {
+		"name": "UPGRADE_TIME_LIMIT_NAME",
+		"desc": "UPGRADE_TIME_LIMIT_DESC"
+	},
+	"extra_craft": {
+		"name": "UPGRADE_EXTRA_CRAFT_NAME",
+		"desc": "UPGRADE_EXTRA_CRAFT_DESC"
+	},
+	"refund": {
+		"name": "UPGRADE_REFUND_NAME",
+		"desc": "UPGRADE_REFUND_DESC"
+	},
+	"xp_boost": {
+		"name": "UPGRADE_XP_BOOST_NAME",
+		"desc": "UPGRADE_XP_BOOST_DESC"
+	}
+}
 
 # Array of active food IDs currently owned by the user
 var inventory: Array = []
@@ -29,7 +55,10 @@ func start_game() -> void:
 	inventory.clear()
 	current_level = 1
 	current_xp = 0
-	xp_needed = 100
+	xp_needed = 30
+	extra_craft_chance = 0.0
+	refund_chance = 0.0
+	xp_multiplier = 1.0
 	emit_signal("level_changed", current_level, current_xp, xp_needed)
 	
 	# Give starting common products
@@ -125,7 +154,9 @@ func combine_items(idx1: int, idx2: int) -> bool:
 				identical_indices.reverse()
 				
 				# Remove the first 3 identical items
+				var spent = []
 				for j in range(3):
+					spent.append(inventory[identical_indices[j]])
 					inventory.remove_at(identical_indices[j])
 				
 				inventory.append(upgrade_result)
@@ -134,18 +165,25 @@ func combine_items(idx1: int, idx2: int) -> bool:
 				time_left = min(time_limit, time_left + 10)
 				emit_signal("time_changed", time_left)
 				
+				# Refund chance
+				if randf() < refund_chance and spent.size() > 0:
+					inventory.append(spent[randi() % spent.size()])
+				
 				var commons = []
 				for id in DataManager.foods:
 					if DataManager.foods[id]["rarity"] == DataManager.Rarity.COMMON:
 						commons.append(id)
 				if commons.size() > 0:
 					inventory.append(commons[randi() % commons.size()])
+					# Extra craft upgrade chance
+					if randf() < extra_craft_chance:
+						inventory.append(commons[randi() % commons.size()])
 					
 				AudioManager.play_sfx("res://Audio/confirmation_001.ogg", 3.0)
 				
 				# Gain XP
-				var xp_reward = get_xp_for_food(upgrade_result)
-				gain_xp(xp_reward)
+				var xp_reward = get_xp_for_food(upgrade_result) * xp_multiplier
+				gain_xp(int(xp_reward))
 				
 				# Notify UI which item was created
 				emit_signal("food_list_updated")
@@ -159,6 +197,7 @@ func combine_items(idx1: int, idx2: int) -> bool:
 		# Remove larger index first to keep lower index valid, then remove lower index.
 		var first = max(idx1, idx2)
 		var second = min(idx1, idx2)
+		var spent = [inventory[first], inventory[second]]
 		inventory.remove_at(first)
 		inventory.remove_at(second)
 		
@@ -168,18 +207,25 @@ func combine_items(idx1: int, idx2: int) -> bool:
 		time_left = min(time_limit, time_left + 10)
 		emit_signal("time_changed", time_left)
 		
+		# Refund chance
+		if randf() < refund_chance and spent.size() > 0:
+			inventory.append(spent[randi() % spent.size()])
+		
 		var commons = []
 		for id in DataManager.foods:
 			if DataManager.foods[id]["rarity"] == DataManager.Rarity.COMMON:
 				commons.append(id)
 		if commons.size() > 0:
 			inventory.append(commons[randi() % commons.size()])
+			# Extra craft upgrade chance
+			if randf() < extra_craft_chance:
+				inventory.append(commons[randi() % commons.size()])
 			
 		AudioManager.play_sfx("res://Audio/confirmation_002.ogg", 3.0)
 		
 		# Gain XP
-		var xp_reward = get_xp_for_food(result)
-		gain_xp(xp_reward)
+		var xp_reward = get_xp_for_food(result) * xp_multiplier
+		gain_xp(int(xp_reward))
 		
 		# Notify UI which item was created
 		emit_signal("food_list_updated")
@@ -201,20 +247,35 @@ func get_xp_for_food(food_id: String) -> int:
 	return 0
 
 func get_xp_needed_for_level(lvl: int) -> int:
-	return 100 + (lvl - 1) * 50
+	return 30 + (lvl - 1) * 15
 
 func gain_xp(amount: int) -> void:
 	if not game_active:
 		return
 	current_xp += amount
-	var leveled_up = false
 	while current_xp >= xp_needed:
 		current_xp -= xp_needed
 		current_level += 1
 		xp_needed = get_xp_needed_for_level(current_level)
-		leveled_up = true
 		_on_level_up()
 	emit_signal("level_changed", current_level, current_xp, xp_needed)
+
+func select_upgrade(upgrade_key: String) -> void:
+	match upgrade_key:
+		"time_limit":
+			time_limit += 10
+			time_left = min(time_limit, time_left + 15)
+			emit_signal("time_changed", time_left)
+		"extra_craft":
+			extra_craft_chance += 0.20
+		"refund":
+			refund_chance += 0.15
+		"xp_boost":
+			xp_multiplier += 0.30
+	# Resume game time
+	var timer = get_node_or_null("GameTimer")
+	if timer:
+		timer.paused = false
 
 func _on_level_up() -> void:
 	# Add a random common ingredient
@@ -225,8 +286,18 @@ func _on_level_up() -> void:
 	if commons.size() > 0:
 		var rand_food = commons[randi() % commons.size()]
 		inventory.append(rand_food)
-		# Defer signaling so UI update happens after everything is settled
-		# Also make sure to emit food_list_updated on GameState directly so other classes pick it up
 		emit_signal("food_list_updated")
 		emit_signal("level_rewarded", rand_food)
 		AudioManager.play_sfx("res://Audio/confirmation_001.ogg", 3.0)
+		
+	# Select 3 random unique upgrades from the list
+	var keys = UPGRADES.keys()
+	keys.shuffle()
+	var selected_upgrades = [keys[0], keys[1], keys[2]]
+	
+	# Pause game timer while selecting upgrade
+	var timer = get_node_or_null("GameTimer")
+	if timer:
+		timer.paused = true
+		
+	emit_signal("level_up_pending", selected_upgrades)
