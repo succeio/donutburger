@@ -26,7 +26,7 @@ let player;
 function InitPlayer(full, callback) {
 	console.log("Player start initialization");
 	ysdk
-		.getPlayer(full)
+		.getPlayer({ scopes: full })
 		.then((_player) => {
 			player = _player;
 			console.log("Player initialized");
@@ -40,18 +40,21 @@ function InitPlayer(full, callback) {
 }
 
 function OpenAuthDialog() {
-	if (player.getMode() === "lite") {
-		// Игрок не авторизован.
+	if (!player.isAuthorized()) {
 		ysdk.auth
 			.openAuthDialog()
 			.then(() => {
-				// Игрок успешно авторизован
-				player.catch((err) => {
-					// Ошибка при инициализации объекта Player.
-				});
+				ysdk.getPlayer()
+					.then((_player) => {
+						player = _player;
+						console.log("Player authorized and reinitialized");
+					})
+					.catch((err) => {
+						console.log("Error reinitializing player after auth:", err);
+					});
 			})
-			.catch(() => {
-				// Игрок не авторизован.
+			.catch((err) => {
+				console.log("Player auth rejected or failed:", err);
 			});
 	}
 }
@@ -83,16 +86,11 @@ function GetLeaderboardDescription(leaderboardName, callback) {
 }
 
 function CheckAuth(callback) {
-	ysdk.isAvailableMethod("leaderboards.setLeaderboardScore").then(
-		(result) => {
-			console.log(result);
-			callback(result);
-		},
-		(error) => {
-			console.log("isAvailableMethod setLeaderboardScore error");
-			callback(false);
-		},
-	);
+	if (player) {
+		callback(player.isAuthorized());
+	} else {
+		callback(false);
+	}
 }
 
 function SaveLeaderboardScore(leaderboardName, score, extraData) {
