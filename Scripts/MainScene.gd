@@ -1111,7 +1111,14 @@ func _setup_leaderboard_ui() -> void:
 	var lb_overlay = ColorRect.new()
 	lb_overlay.name = "LeaderboardOverlay"
 	lb_overlay.visible = false
-	lb_overlay.anchors_preset = Control.PRESET_FULL_RECT
+	lb_overlay.anchor_left = 0.0
+	lb_overlay.anchor_top = 0.0
+	lb_overlay.anchor_right = 1.0
+	lb_overlay.anchor_bottom = 1.0
+	lb_overlay.offset_left = 0
+	lb_overlay.offset_top = 0
+	lb_overlay.offset_right = 0
+	lb_overlay.offset_bottom = 0
 	lb_overlay.grow_horizontal = 2
 	lb_overlay.grow_vertical = 2
 	lb_overlay.color = Color(0.05, 0.08, 0.06, 0.95) # Everforest dark background
@@ -1119,10 +1126,17 @@ func _setup_leaderboard_ui() -> void:
 	var vbox = VBoxContainer.new()
 	vbox.name = "VBox"
 	vbox.layout_mode = 1
-	vbox.anchors_preset = Control.PRESET_CENTER
-	vbox.grow_horizontal = 2
-	vbox.grow_vertical = 2
+	vbox.anchor_left = 0.5
+	vbox.anchor_top = 0.5
+	vbox.anchor_right = 0.5
+	vbox.anchor_bottom = 0.5
+	vbox.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	vbox.grow_vertical = Control.GROW_DIRECTION_BOTH
 	vbox.custom_minimum_size = Vector2(500, 500)
+	vbox.offset_left = -250
+	vbox.offset_top = -250
+	vbox.offset_right = 250
+	vbox.offset_bottom = 250
 	vbox.add_theme_constant_override("separation", 20)
 	
 	var title = Label.new()
@@ -1168,6 +1182,14 @@ func _setup_leaderboard_ui() -> void:
 	lb_overlay.add_child(vbox)
 	$UI.add_child(lb_overlay)
 	
+	# Force anchor preset updates after adding to tree
+	lb_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.set_anchors_preset(Control.PRESET_CENTER)
+	vbox.offset_left = -250
+	vbox.offset_top = -250
+	vbox.offset_right = 250
+	vbox.offset_bottom = 250
+	
 	# Add Leaderboard Button on StartMenu dynamically
 	var start_vbox = $UI/StartMenu/VBox
 	var lb_btn = Button.new()
@@ -1207,6 +1229,13 @@ func _on_leaderboard_btn_pressed() -> void:
 	
 	start_menu.visible = false
 	lb_overlay.visible = true
+	lb_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var vbox_node = lb_overlay.get_node("VBox")
+	vbox_node.set_anchors_preset(Control.PRESET_CENTER)
+	vbox_node.offset_left = -250
+	vbox_node.offset_top = -250
+	vbox_node.offset_right = 250
+	vbox_node.offset_bottom = 250
 	
 	if YandexSDK.ysdk:
 		if YandexSDK.is_authorized:
