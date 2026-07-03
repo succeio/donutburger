@@ -95,6 +95,7 @@ func start_game() -> void:
 		inventory.append(rand_food)
 		
 	game_active = true
+	YandexSDK.gameplay_started()
 	emit_signal("food_list_updated")
 	emit_signal("time_changed", time_left)
 	
@@ -147,6 +148,7 @@ func _on_timer_timeout() -> void:
 
 func end_game() -> void:
 	game_active = false
+	YandexSDK.gameplay_stopped()
 	var timer = get_node_or_null("GameTimer")
 	if timer:
 		timer.queue_free()
@@ -158,6 +160,21 @@ func end_game() -> void:
 		score += DataManager.RARITY_INFO[rarity]["value"]
 		
 	emit_signal("game_over", score)
+
+	# Save player highscore or progress instantly to local system and cloud
+	var save_data = {
+		"high_score": score,
+		"inventory": inventory,
+		"level": current_level
+	}
+	var save_file = FileAccess.open("user://savegame.save", FileAccess.WRITE)
+	if save_file:
+		save_file.store_string(JSON.stringify(save_data))
+		save_file.close()
+	if has_node("/root/YandexSDK"):
+		var sdk = get_node("/root/YandexSDK")
+		sdk.save_cloud_data(save_data)
+		sdk.set_leaderboard_score("score", score)
 
 # Roll / Buy a random ingredient for time penalty
 func roll_ingredient() -> bool:
@@ -178,6 +195,19 @@ func roll_ingredient() -> bool:
 	time_left = max(0, time_left - 5)
 	emit_signal("time_changed", time_left)
 	emit_signal("food_list_updated")
+	
+	# Save game data instantly after player action (rolling ingredient)
+	var save_data = {
+		"inventory": inventory,
+		"level": current_level,
+		"upgrades": active_upgrades
+	}
+	var save_file = FileAccess.open("user://savegame.save", FileAccess.WRITE)
+	if save_file:
+		save_file.store_string(JSON.stringify(save_data))
+		save_file.close()
+	if has_node("/root/YandexSDK"):
+		get_node("/root/YandexSDK").save_cloud_data(save_data)
 	
 	if time_left <= 0:
 		end_game()
@@ -208,6 +238,7 @@ func combine_items(idx1: int, idx2: int) -> bool:
 		
 	var item1 = inventory[idx1]
 	var item2 = inventory[idx2]
+	var success = false
 	
 	# Check if they are identical. If so, check if we have a third identical item in inventory.
 	if item1 == item2:
@@ -262,51 +293,66 @@ func combine_items(idx1: int, idx2: int) -> bool:
 				# Notify UI which item was created
 				emit_signal("food_list_updated")
 				emit_signal("food_combined", upgrade_result)
-				return true
+				success = true
 				
-	var result = DataManager.find_recipe(item1, item2)
-	
-	if result != "":
-		# Add combined result FIRST, so index removals don't break or access out of bounds
-		# Remove larger index first to keep lower index valid, then remove lower index.
-		var first = max(idx1, idx2)
-		var second = min(idx1, idx2)
-		var spent = [inventory[first], inventory[second]]
-		inventory.remove_at(first)
-		inventory.remove_at(second)
-		
-		inventory.append(result)
-		
-		# Successful recipe combine bonus: +10 seconds, +1 free common ingredient
-		time_left = min(time_limit, time_left + 10)
-		emit_signal("time_changed", time_left)
-		
-		# Refund chance
-		if randf() < refund_chance and spent.size() > 0:
-			inventory.append(spent[randi() % spent.size()])
-		
-		var commons = []
-		for id in DataManager.foods:
-			if DataManager.foods[id]["rarity"] == DataManager.Rarity.COMMON:
-				commons.append(id)
-		if commons.size() > 0:
-			var bonus_item = commons[randi() % commons.size()]
-			inventory.append(bonus_item)
+	if not success:
+		var result = DataManager.find_recipe(item1, item2)
+		if result != "":
+			# Add combined result FIRST, so index removals don't break or access out of bounds
+			# Remove larger index first to keep lower index valid, then remove lower index.
+			var first = max(idx1, idx2)
+			var second = min(idx1, idx2)
+			var spent = [inventory[first], inventory[second]]
+			inventory.remove_at(first)
+			inventory.remove_at(second)
 			
-			# Extra craft upgrade chance
-			if randf() < extra_craft_chance:
-				var extra_bonus = commons[randi() % commons.size()]
-				inventory.append(extra_bonus)
+			inventory.append(result)
 			
-		AudioManager.play_sfx("res://Audio/confirmation_002.ogg", 3.0)
-		
-		# Gain XP
-		var xp_reward = get_xp_for_food(result) * xp_multiplier
-		gain_xp(int(xp_reward))
-		
-		# Notify UI which item was created
-		emit_signal("food_list_updated")
-		emit_signal("food_combined", result)
+			# Successful recipe combine bonus: +10 seconds, +1 free common ingredient
+			time_left = min(time_limit, time_left + 10)
+			emit_signal("time_changed", time_left)
+			
+			# Refund chance
+			if randf() < refund_chance and spent.size() > 0:
+				inventory.append(spent[randi() % spent.size()])
+			
+			var commons = []
+			for id in DataManager.foods:
+				if DataManager.foods[id]["rarity"] == DataManager.Rarity.COMMON:
+					commons.append(id)
+			if commons.size() > 0:
+				var bonus_item = commons[randi() % commons.size()]
+				inventory.append(bonus_item)
+				
+				# Extra craft upgrade chance
+				if randf() < extra_craft_chance:
+					var extra_bonus = commons[randi() % commons.size()]
+					inventory.append(extra_bonus)
+				
+			AudioManager.play_sfx("res://Audio/confirmation_002.ogg", 3.0)
+			
+			# Gain XP
+			var xp_reward = get_xp_for_food(result) * xp_multiplier
+			gain_xp(int(xp_reward))
+			
+			# Notify UI which item was created
+			emit_signal("food_list_updated")
+			emit_signal("food_combined", result)
+			success = true
+			
+	if success:
+		# Save game data instantly after player action (combining items)
+		var save_data = {
+			"inventory": inventory,
+			"level": current_level,
+			"upgrades": active_upgrades
+		}
+		var save_file = FileAccess.open("user://savegame.save", FileAccess.WRITE)
+		if save_file:
+			save_file.store_string(JSON.stringify(save_data))
+			save_file.close()
+		if has_node("/root/YandexSDK"):
+			get_node("/root/YandexSDK").save_cloud_data(save_data)
 		return true
 		
 	return false
@@ -356,6 +402,19 @@ func select_upgrade(upgrade_key: String) -> void:
 			quality_upgrade_chance += 0.15
 		"auto_combine":
 			auto_combine_enabled = true
+			
+	# Save upgrade selection instantly (persistence requirement)
+	var save_data = {
+		"inventory": inventory,
+		"level": current_level,
+		"upgrades": active_upgrades
+	}
+	var save_file = FileAccess.open("user://savegame.save", FileAccess.WRITE)
+	if save_file:
+		save_file.store_string(JSON.stringify(save_data))
+		save_file.close()
+	if has_node("/root/YandexSDK"):
+		get_node("/root/YandexSDK").save_cloud_data(save_data)
 			
 	# Resume game time
 	var timer = get_node_or_null("GameTimer")

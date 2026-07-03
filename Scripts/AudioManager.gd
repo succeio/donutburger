@@ -27,6 +27,17 @@ func _ready() -> void:
 		add_child(p)
 		sfx_player_pool.append(p)
 
+func _notification(what: int) -> void:
+	match what:
+		NOTIFICATION_APPLICATION_FOCUS_OUT:
+			AudioServer.set_bus_mute(AudioServer.get_bus_index("Master"), true)
+		NOTIFICATION_APPLICATION_FOCUS_IN:
+			AudioServer.set_bus_mute(AudioServer.get_bus_index("Master"), false)
+		NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+			AudioServer.set_bus_mute(AudioServer.get_bus_index("Master"), true)
+		NOTIFICATION_WM_WINDOW_FOCUS_IN:
+			AudioServer.set_bus_mute(AudioServer.get_bus_index("Master"), false)
+
 func play_sfx(sound_path: String, volume_db: float = 0.0) -> void:
 	var stream = load(sound_path)
 	if not stream:

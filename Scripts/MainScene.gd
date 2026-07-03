@@ -40,12 +40,35 @@ func _ready() -> void:
 	GameState.food_list_updated.connect(_update_ui)
 	GameState.food_combined.connect(trigger_combine_popup)
 	
+	# Connect to window resizing events to restrict aspect ratio to 2:1 on wide desktop layouts
+	get_tree().root.size_changed.connect(_on_window_resize)
+	_on_window_resize()
+	
 	roll_button.pressed.connect(_on_roll_pressed)
 	restart_button.pressed.connect(_on_restart_pressed)
 	play_button.pressed.connect(_on_play_pressed)
 	
 	btn_ru.pressed.connect(func(): LocManager.set_language("ru"))
 	btn_zh.pressed.connect(func(): LocManager.set_language("zh"))
+	
+	# Add Yandex ID Login button dynamically inside LanguageContainer if running on Web and SDK is loaded
+	if YandexSDK.ysdk:
+		var auth_btn = Button.new()
+		auth_btn.text = "Войти / Login Yandex ID"
+		auth_btn.add_theme_color_override("font_color", Color.WHITE)
+		var auth_style = StyleBoxFlat.new()
+		auth_style.bg_color = Color(0.9, 0.2, 0.2)
+		auth_style.set_corner_radius_all(8)
+		auth_style.set_content_margin_all(8)
+		auth_btn.add_theme_stylebox_override("normal", auth_style)
+		auth_btn.pressed.connect(func(): YandexSDK.request_authorization())
+		$UI/StartMenu/VBox/LanguageContainer.add_child(auth_btn)
+		
+		# Hook up load cloud data if authorized
+		YandexSDK.player_ready.connect(func():
+			if YandexSDK.is_authorized:
+				YandexSDK.load_cloud_data(self, "_on_yandex_cloud_data_loaded")
+		)
 	
 	_setup_popup_ui()
 	_setup_kitchen_scene()
@@ -66,6 +89,7 @@ func _ready() -> void:
 	_setup_start_menu_visuals()
 	_update_localization()
 	_show_random_menu_food()
+	YandexSDK.game_ready()
 
 func _setup_start_menu_visuals() -> void:
 	# Add beautiful text outline, colors and styling to Start Menu
@@ -176,6 +200,32 @@ func _on_play_pressed() -> void:
 	_clear_3d_food()
 	AudioManager.play_sfx("res://Audio/maximize_001.ogg")
 	GameState.start_game()
+
+func _on_yandex_cloud_data_loaded(data: Dictionary) -> void:
+	if data.has("inventory"):
+		GameState.inventory = data["inventory"]
+	if data.has("level"):
+		GameState.current_level = data["level"]
+	if data.has("upgrades"):
+		GameState.active_upgrades = data["upgrades"]
+	GameState.emit_signal("food_list_updated")
+
+func _on_window_resize() -> void:
+	var viewport_size = get_viewport().get_visible_rect().size
+	if viewport_size.y > 0:
+		var aspect = viewport_size.x / viewport_size.y
+		# Enforce Yandex Games aspect ratio requirement (max 2:1 ratio for playable area)
+		# We adjust MainLayout (Control node) since UI (CanvasLayer) doesn't have transform limits.
+		var main_layout_node = $UI/MainLayout
+		if aspect > 2.0:
+			var max_width = viewport_size.y * 2.0
+			main_layout_node.custom_minimum_size.x = max_width
+			# Center UI container in window
+			var offset = (viewport_size.x - max_width) / 2.0
+			main_layout_node.position.x = offset
+		else:
+			main_layout_node.custom_minimum_size.x = 0
+			main_layout_node.position.x = 0
 
 var popup_panel: PanelContainer = null
 var popup_label: Label = null
@@ -567,7 +617,7 @@ func _populate_recipes_ui() -> void:
 		
 	if available_recipes.size() == 0 and identical_upgrades.size() == 0:
 		var empty_label = Label.new()
-		empty_label.text = "No combinations available\nwith current ingredients."
+		empty_label.text = LocManager.translate_key("UI_NO_RECIPES")
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD
@@ -845,7 +895,7 @@ func _on_level_up_pending(options: Array) -> void:
 		
 		# Select button
 		var select_btn = Button.new()
-		select_btn.text = "SELECT"
+		select_btn.text = LocManager.translate_key("UI_SELECT_BUTTON")
 		select_btn.custom_minimum_size = Vector2(100, 35)
 		select_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		

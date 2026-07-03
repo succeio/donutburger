@@ -21,6 +21,7 @@ AudioManager="*res://Scripts/AudioManager.gd"
 GameState="*res://Scripts/GameState.gd"
 DataManager="*res://Scripts/DataManager.gd"
 LocManager="*res://Scripts/LocManager.gd"
+YandexSDK="*res://addons/godot-yandex-games-sdk/yandex_sdk.gd"
 
 [physics]
 
@@ -29,3 +30,21 @@ LocManager="*res://Scripts/LocManager.gd"
 [rendering]
 
 rendering_device/driver.windows="d3d12"
+
+[display]
+
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[gui]
+
+[gui]
+
+theme/custom_font="res://Fonts/chinese.ttf"
+
+locale/translations=PackedStringArray("res://localization.ru.translation", "res://localization.zh.translation")
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/godot-yandex-games-sdk/plugin.cfg")
+
