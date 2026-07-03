@@ -1,37 +1,37 @@
-[gd_scene load_steps=4 format=3 uid="uid://b5s7a8c3d8e"]
+[gd_scene format=3 uid="uid://b5s7a8c3d8e"]
 
-[ext_resource type="Script" path="res://Scripts/MainScene.gd" id="1_main"]
-[ext_resource type="Texture2D" uid="uid://c6y788a3e9f" path="res://brg.png" id="1_logo"]
+[ext_resource type="Texture2D" uid="uid://h1w1gril6llb" path="res://brg.png" id="1_logo"]
+[ext_resource type="Script" uid="uid://b0pgv11p2chox" path="res://Scripts/MainScene.gd" id="1_main"]
 
 [sub_resource type="Environment" id="Environment_1"]
 background_mode = 1
 background_color = Color(0.78, 0.56, 0.16, 1)
 ambient_light_color = Color(0.9, 0.9, 0.9, 1)
 
-[node name="MainScene" type="Node3D"]
+[node name="MainScene" type="Node3D" unique_id=1586096507]
 script = ExtResource("1_main")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1179112197]
 environment = SubResource("Environment_1")
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=95242705]
 transform = Transform3D(0.866025, -0.353553, 0.353553, 0, 0.707107, 0.707107, -0.5, -0.612372, 0.612372, 0, 5, 0)
 shadow_enabled = true
 
-[node name="Camera3D" type="Camera3D" parent="."]
+[node name="Camera3D" type="Camera3D" parent="." unique_id=344113026]
 transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 2.5, 3.2)
 
-[node name="FoodPivot" type="Node3D" parent="."]
+[node name="FoodPivot" type="Node3D" parent="." unique_id=1363094371]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
 
-[node name="KitchenScene" type="Node3D" parent="."]
+[node name="KitchenScene" type="Node3D" parent="." unique_id=1310505862]
 
-[node name="Table" type="MeshInstance3D" parent="KitchenScene"]
+[node name="Table" type="MeshInstance3D" parent="KitchenScene" unique_id=3806468]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 
-[node name="UI" type="CanvasLayer" parent="."]
+[node name="UI" type="CanvasLayer" parent="." unique_id=1226481157]
 
-[node name="MainLayout" type="HBoxContainer" parent="UI"]
+[node name="MainLayout" type="HBoxContainer" parent="UI" unique_id=2049664476]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -39,34 +39,34 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 10
 
-[node name="LeftPanel" type="PanelContainer" parent="UI/MainLayout"]
+[node name="LeftPanel" type="PanelContainer" parent="UI/MainLayout" unique_id=1246440560]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 
-[node name="VBox" type="VBoxContainer" parent="UI/MainLayout/LeftPanel"]
+[node name="VBox" type="VBoxContainer" parent="UI/MainLayout/LeftPanel" unique_id=76580324]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Title" type="Label" parent="UI/MainLayout/LeftPanel/VBox"]
+[node name="Title" type="Label" parent="UI/MainLayout/LeftPanel/VBox" unique_id=1381585636]
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = " Combinations"
 horizontal_alignment = 1
 
-[node name="Scroll" type="ScrollContainer" parent="UI/MainLayout/LeftPanel/VBox"]
+[node name="Scroll" type="ScrollContainer" parent="UI/MainLayout/LeftPanel/VBox" unique_id=133992658]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="RecipeList" type="VBoxContainer" parent="UI/MainLayout/LeftPanel/VBox/Scroll"]
+[node name="RecipeList" type="VBoxContainer" parent="UI/MainLayout/LeftPanel/VBox/Scroll" unique_id=1432670236]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
-[node name="CenterSpace" type="Control" parent="UI/MainLayout"]
+[node name="CenterSpace" type="Control" parent="UI/MainLayout" unique_id=1169313150]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="UpgradesList" type="HBoxContainer" parent="UI/MainLayout/CenterSpace"]
+[node name="UpgradesList" type="HBoxContainer" parent="UI/MainLayout/CenterSpace" unique_id=527126951]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
@@ -78,7 +78,7 @@ grow_horizontal = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="XPProgressBar" type="ProgressBar" parent="UI/MainLayout/CenterSpace"]
+[node name="XPProgressBar" type="ProgressBar" parent="UI/MainLayout/CenterSpace" unique_id=2130877762]
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
@@ -87,9 +87,8 @@ anchor_bottom = 1.0
 offset_top = -27.0
 grow_horizontal = 2
 grow_vertical = 0
-show_percentage = true
 
-[node name="LevelLabel" type="Label" parent="UI/MainLayout/CenterSpace"]
+[node name="LevelLabel" type="Label" parent="UI/MainLayout/CenterSpace" unique_id=1673801313]
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
@@ -102,36 +101,36 @@ grow_vertical = 0
 text = "Level: 1"
 horizontal_alignment = 1
 
-[node name="RightPanel" type="PanelContainer" parent="UI/MainLayout"]
+[node name="RightPanel" type="PanelContainer" parent="UI/MainLayout" unique_id=607737728]
 custom_minimum_size = Vector2(350, 0)
 layout_mode = 2
 
-[node name="VBox" type="VBoxContainer" parent="UI/MainLayout/RightPanel"]
+[node name="VBox" type="VBoxContainer" parent="UI/MainLayout/RightPanel" unique_id=1236351754]
 layout_mode = 2
 theme_override_constants/separation = 15
 
-[node name="StatusContainer" type="HBoxContainer" parent="UI/MainLayout/RightPanel/VBox"]
+[node name="StatusContainer" type="HBoxContainer" parent="UI/MainLayout/RightPanel/VBox" unique_id=1319281431]
 layout_mode = 2
 alignment = 1
 
-[node name="TimeLabel" type="Label" parent="UI/MainLayout/RightPanel/VBox/StatusContainer"]
+[node name="TimeLabel" type="Label" parent="UI/MainLayout/RightPanel/VBox/StatusContainer" unique_id=477015727]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 24
 text = "Time: 60s"
 horizontal_alignment = 1
 
-[node name="InventoryTitle" type="Label" parent="UI/MainLayout/RightPanel/VBox"]
+[node name="InventoryTitle" type="Label" parent="UI/MainLayout/RightPanel/VBox" unique_id=756023159]
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 text = "Your Ingredients (Drag to combine)"
 horizontal_alignment = 1
 
-[node name="Scroll" type="ScrollContainer" parent="UI/MainLayout/RightPanel/VBox"]
+[node name="Scroll" type="ScrollContainer" parent="UI/MainLayout/RightPanel/VBox" unique_id=1308778508]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="InventoryGrid" type="GridContainer" parent="UI/MainLayout/RightPanel/VBox/Scroll"]
+[node name="InventoryGrid" type="GridContainer" parent="UI/MainLayout/RightPanel/VBox/Scroll" unique_id=1572809600]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -139,25 +138,25 @@ theme_override_constants/h_separation = 10
 theme_override_constants/v_separation = 10
 columns = 3
 
-[node name="BottomControls" type="HBoxContainer" parent="UI/MainLayout/RightPanel/VBox"]
+[node name="BottomControls" type="HBoxContainer" parent="UI/MainLayout/RightPanel/VBox" unique_id=1302350774]
 layout_mode = 2
 alignment = 1
 
-[node name="RollButton" type="Button" parent="UI/MainLayout/RightPanel/VBox/BottomControls"]
+[node name="RollButton" type="Button" parent="UI/MainLayout/RightPanel/VBox/BottomControls" unique_id=945069120]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
 text = "Roll (+1 Common, -5s)"
 
-[node name="StartMenu" type="ColorRect" parent="UI"]
+[node name="StartMenu" type="ColorRect" parent="UI" unique_id=1813749283]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.08, 0.09, 0.11, 0.0)
+color = Color(0.08, 0.09, 0.11, 0)
 
-[node name="VBox" type="VBoxContainer" parent="UI/StartMenu"]
+[node name="VBox" type="VBoxContainer" parent="UI/StartMenu" unique_id=385038932]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -173,7 +172,7 @@ grow_vertical = 2
 theme_override_constants/separation = 20
 alignment = 1
 
-[node name="Logo" type="TextureRect" parent="UI/StartMenu/VBox"]
+[node name="Logo" type="TextureRect" parent="UI/StartMenu/VBox" unique_id=1767749782]
 custom_minimum_size = Vector2(400, 400)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -181,37 +180,37 @@ texture = ExtResource("1_logo")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="LanguageContainer" type="HBoxContainer" parent="UI/StartMenu/VBox"]
+[node name="LanguageContainer" type="HBoxContainer" parent="UI/StartMenu/VBox" unique_id=463823189]
 layout_mode = 2
-alignment = 1
 theme_override_constants/separation = 20
+alignment = 1
 
-[node name="BtnRU" type="Button" parent="UI/StartMenu/VBox/LanguageContainer"]
+[node name="BtnRU" type="Button" parent="UI/StartMenu/VBox/LanguageContainer" unique_id=206331203]
 custom_minimum_size = Vector2(100, 40)
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 text = "Русский"
 
-[node name="BtnZH" type="Button" parent="UI/StartMenu/VBox/LanguageContainer"]
+[node name="BtnZH" type="Button" parent="UI/StartMenu/VBox/LanguageContainer" unique_id=969436786]
 custom_minimum_size = Vector2(100, 40)
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 text = "中文"
 
-[node name="SubTitle" type="Label" parent="UI/StartMenu/VBox"]
+[node name="SubTitle" type="Label" parent="UI/StartMenu/VBox" unique_id=1913637336]
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 text = "Combine ingredients! Beat the timer!"
 horizontal_alignment = 1
 
-[node name="PlayButton" type="Button" parent="UI/StartMenu/VBox"]
-layout_mode = 2
+[node name="PlayButton" type="Button" parent="UI/StartMenu/VBox" unique_id=25260364]
 custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 24
 text = "START COOKING"
 
-[node name="GameOverOverlay" type="ColorRect" parent="UI"]
+[node name="GameOverOverlay" type="ColorRect" parent="UI" unique_id=529800322]
 visible = false
 anchors_preset = 15
 anchor_right = 1.0
@@ -220,7 +219,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.823529)
 
-[node name="VBox" type="VBoxContainer" parent="UI/GameOverOverlay"]
+[node name="VBox" type="VBoxContainer" parent="UI/GameOverOverlay" unique_id=982641984]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -236,24 +235,24 @@ grow_vertical = 2
 theme_override_constants/separation = 20
 alignment = 1
 
-[node name="Title" type="Label" parent="UI/GameOverOverlay/VBox"]
+[node name="Title" type="Label" parent="UI/GameOverOverlay/VBox" unique_id=2033849915]
 layout_mode = 2
 theme_override_font_sizes/font_size = 36
 text = "TIME'S UP!"
 horizontal_alignment = 1
 
-[node name="ScoreLabel" type="Label" parent="UI/GameOverOverlay/VBox"]
+[node name="ScoreLabel" type="Label" parent="UI/GameOverOverlay/VBox" unique_id=266956340]
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
 text = "Final Culinary Score: 0"
 horizontal_alignment = 1
 
-[node name="RestartButton" type="Button" parent="UI/GameOverOverlay/VBox"]
+[node name="RestartButton" type="Button" parent="UI/GameOverOverlay/VBox" unique_id=451154391]
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "Cook Again"
 
-[node name="UpgradeOverlay" type="ColorRect" parent="UI"]
+[node name="UpgradeOverlay" type="ColorRect" parent="UI" unique_id=2140053444]
 visible = false
 anchors_preset = 15
 anchor_right = 1.0
@@ -262,7 +261,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.05, 0.05, 0.08, 0.85)
 
-[node name="VBox" type="VBoxContainer" parent="UI/UpgradeOverlay"]
+[node name="VBox" type="VBoxContainer" parent="UI/UpgradeOverlay" unique_id=1116876219]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -278,13 +277,13 @@ grow_vertical = 2
 theme_override_constants/separation = 30
 alignment = 1
 
-[node name="Title" type="Label" parent="UI/UpgradeOverlay/VBox"]
+[node name="Title" type="Label" parent="UI/UpgradeOverlay/VBox" unique_id=1023925855]
 layout_mode = 2
 theme_override_font_sizes/font_size = 36
 text = "SELECT AN UPGRADE"
 horizontal_alignment = 1
 
-[node name="CardsContainer" type="HBoxContainer" parent="UI/UpgradeOverlay/VBox"]
+[node name="CardsContainer" type="HBoxContainer" parent="UI/UpgradeOverlay/VBox" unique_id=1042939296]
 layout_mode = 2
 theme_override_constants/separation = 25
 alignment = 1

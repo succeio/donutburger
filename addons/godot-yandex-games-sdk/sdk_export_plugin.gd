@@ -20,18 +20,27 @@ func _export_begin(features: PackedStringArray, is_debug: bool, path: String, fl
 func _export_end() -> void:
 	if exporting:
 		var file := FileAccess.open(export_path, FileAccess.READ)
+		if file == null:
+			printerr("YandexSDK: Cannot open export path: ", export_path)
+			exporting = false
+			return
 		var html := file.get_as_text()
 		file.close()
 		var pos = html.find('</head>')
-		
-		html = html.insert(pos, 
-				'<script src="' + JS_SDK_REF + '"></script>\n' +
-				'<script src="' + JS_FILE + '"></script>\n')
-		DirAccess.copy_absolute(plugin_path + '/' + JS_FILE, export_path.get_base_dir() + '/' + JS_FILE)
-		
-		file = FileAccess.open(export_path, FileAccess.WRITE)
-		file.store_string(html)
-		file.close()
+		if pos != -1:
+			html = html.insert(pos, 
+					'<script src="' + JS_SDK_REF + '"></script>\n' +
+					'<script src="' + JS_FILE + '"></script>\n')
+			DirAccess.copy_absolute(plugin_path + '/' + JS_FILE, export_path.get_base_dir() + '/' + JS_FILE)
+			
+			file = FileAccess.open(export_path, FileAccess.WRITE)
+			if file != null:
+				file.store_string(html)
+				file.close()
+			else:
+				printerr("YandexSDK: Cannot write back to export path: ", export_path)
+		else:
+			printerr("YandexSDK: </head> not found in ", export_path)
 
 	exporting = false
 

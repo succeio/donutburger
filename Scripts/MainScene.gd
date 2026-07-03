@@ -54,7 +54,7 @@ func _ready() -> void:
 	# Add Yandex ID Login button dynamically inside LanguageContainer if running on Web and SDK is loaded
 	if YandexSDK.ysdk:
 		var auth_btn = Button.new()
-		auth_btn.text = "Войти / Login Yandex ID"
+		auth_btn.text = "Войти Yandex ID" if LocManager.current_lang == "ru" else "登录 Yandex ID"
 		auth_btn.add_theme_color_override("font_color", Color.WHITE)
 		var auth_style = StyleBoxFlat.new()
 		auth_style.bg_color = Color(0.9, 0.2, 0.2)
@@ -69,6 +69,15 @@ func _ready() -> void:
 			if YandexSDK.is_authorized:
 				YandexSDK.load_cloud_data(self, "_on_yandex_cloud_data_loaded")
 		)
+		
+		# Hook to update Login Button text on language change
+		LocManager.main = self # Make sure reference exists
+		
+		# Leaderboard dynamic UI hookup
+		YandexSDK.leaderboard_entries_loaded.connect(_on_yandex_leaderboard_loaded)
+	
+	# Create leaderboard UI dynamically
+	_setup_leaderboard_ui()
 	
 	_setup_popup_ui()
 	_setup_kitchen_scene()
@@ -260,7 +269,7 @@ func _setup_popup_ui() -> void:
 	vbox.add_theme_constant_override("separation", 15)
 	
 	var congrats = Label.new()
-	congrats.text = "ITEM FOUND!"
+	congrats.text = ""
 	congrats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	congrats.add_theme_font_size_override("font_size", 14)
 	congrats.add_theme_color_override("font_color", Color.GOLD)
@@ -528,7 +537,8 @@ func _populate_recipes_ui() -> void:
 		out_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		out_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		out_rect.texture = load(out_data["preview"])
-		out_rect.tooltip_text = LocManager.translate_key(out_data["name"]) + " (Random next-tier)"
+		var next_tier_suffix = " (Случайный след. тир)" if LocManager.current_lang == "ru" else " (Random next-tier)"
+		out_rect.tooltip_text = LocManager.translate_key(out_data["name"]) + next_tier_suffix
 		
 		var panel = PanelContainer.new()
 		var sb = StyleBoxFlat.new()
@@ -678,7 +688,8 @@ func _update_ui() -> void:
 		
 		# Tooltip
 		var rarity_name_key = DataManager.RARITY_INFO[food_data["rarity"]]["name"]
-		button.tooltip_text = "%s (%s)\nScore Value: %d" % [
+		var score_value_text = "Очки: %d" if LocManager.current_lang == "ru" else "Score: %d"
+		button.tooltip_text = ("%s (%s)\n" + score_value_text) % [
 			LocManager.translate_key(food_data["name"]),
 			LocManager.translate_key(rarity_name_key),
 			DataManager.RARITY_INFO[food_data["rarity"]]["value"]
@@ -963,6 +974,20 @@ func _update_localization() -> void:
 	
 	upgrade_title.text = LocManager.translate_key("UI_SELECT_UPGRADE")
 	
+	if has_node("UI/LeaderboardOverlay"):
+		var lb_overlay = $UI/LeaderboardOverlay
+		lb_overlay.get_node("VBox/Title").text = LocManager.translate_key("UI_LEADERBOARD")
+		lb_overlay.get_node("VBox/CloseButton").text = LocManager.translate_key("UI_LEADERBOARD_CLOSE")
+	
+	if has_node("UI/StartMenu/VBox/LeaderboardButton"):
+		$UI/StartMenu/VBox/LeaderboardButton.text = LocManager.translate_key("UI_LEADERBOARD")
+		
+	# Find and update auth_btn inside LanguageContainer if it exists
+	var lang_container = $UI/StartMenu/VBox/LanguageContainer
+	for child in lang_container.get_children():
+		if child is Button and child.text.contains("Yandex ID"):
+			child.text = "Войти Yandex ID" if LocManager.current_lang == "ru" else "登录 Yandex ID"
+	
 	_update_ui()
 
 func _setup_kitchen_scene() -> void:
@@ -1076,3 +1101,216 @@ func _setup_kitchen_scene() -> void:
 			inst.rotation_degrees = item["rot"]
 			
 			kitchen_scene.add_child(inst)
+
+# Leaderboard UI and logic implementation
+func _setup_leaderboard_ui() -> void:
+	# Check if overlay already exists
+	if $UI.has_node("LeaderboardOverlay"):
+		return
+		
+	var lb_overlay = ColorRect.new()
+	lb_overlay.name = "LeaderboardOverlay"
+	lb_overlay.visible = false
+	lb_overlay.anchor_left = 0.0
+	lb_overlay.anchor_top = 0.0
+	lb_overlay.anchor_right = 1.0
+	lb_overlay.anchor_bottom = 1.0
+	lb_overlay.offset_left = 0
+	lb_overlay.offset_top = 0
+	lb_overlay.offset_right = 0
+	lb_overlay.offset_bottom = 0
+	lb_overlay.grow_horizontal = 2
+	lb_overlay.grow_vertical = 2
+	lb_overlay.color = Color(0.05, 0.08, 0.06, 0.95) # Everforest dark background
+	
+	var vbox = VBoxContainer.new()
+	vbox.name = "VBox"
+	vbox.layout_mode = 1
+	vbox.anchor_left = 0.5
+	vbox.anchor_top = 0.5
+	vbox.anchor_right = 0.5
+	vbox.anchor_bottom = 0.5
+	vbox.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	vbox.grow_vertical = Control.GROW_DIRECTION_BOTH
+	vbox.custom_minimum_size = Vector2(500, 500)
+	vbox.offset_left = -250
+	vbox.offset_top = -250
+	vbox.offset_right = 250
+	vbox.offset_bottom = 250
+	vbox.add_theme_constant_override("separation", 20)
+	
+	var title = Label.new()
+	title.name = "Title"
+	title.text = LocManager.translate_key("UI_LEADERBOARD")
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 32)
+	title.add_theme_color_override("font_color", Color(0.85, 0.95, 0.85))
+	vbox.add_child(title)
+	
+	var scroll = ScrollContainer.new()
+	scroll.name = "Scroll"
+	scroll.custom_minimum_size = Vector2(500, 350)
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	
+	var list = VBoxContainer.new()
+	list.name = "List"
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 10)
+	scroll.add_child(list)
+	vbox.add_child(scroll)
+	
+	var close_btn = Button.new()
+	close_btn.name = "CloseButton"
+	close_btn.text = LocManager.translate_key("UI_LEADERBOARD_CLOSE")
+	close_btn.custom_minimum_size = Vector2(180, 45)
+	close_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	
+	var btn_style = StyleBoxFlat.new()
+	btn_style.bg_color = Color(0.2, 0.5, 0.3)
+	btn_style.set_corner_radius_all(10)
+	var btn_style_hover = btn_style.duplicate()
+	btn_style_hover.bg_color = Color(0.25, 0.6, 0.35)
+	
+	close_btn.add_theme_stylebox_override("normal", btn_style)
+	close_btn.add_theme_stylebox_override("hover", btn_style_hover)
+	close_btn.pressed.connect(func():
+		AudioManager.play_sfx("res://Audio/click_005.ogg")
+		lb_overlay.visible = false
+		start_menu.visible = true
+	)
+	vbox.add_child(close_btn)
+	lb_overlay.add_child(vbox)
+	$UI.add_child(lb_overlay)
+	
+	# Force anchor preset updates after adding to tree
+	lb_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.set_anchors_preset(Control.PRESET_CENTER)
+	vbox.offset_left = -250
+	vbox.offset_top = -250
+	vbox.offset_right = 250
+	vbox.offset_bottom = 250
+	
+	# Add Leaderboard Button on StartMenu dynamically
+	var start_vbox = $UI/StartMenu/VBox
+	var lb_btn = Button.new()
+	lb_btn.name = "LeaderboardButton"
+	lb_btn.text = LocManager.translate_key("UI_LEADERBOARD")
+	lb_btn.custom_minimum_size = Vector2(200, 45)
+	lb_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	
+	var lb_btn_style = StyleBoxFlat.new()
+	lb_btn_style.bg_color = Color(0.18, 0.35, 0.22)
+	lb_btn_style.set_corner_radius_all(8)
+	var lb_btn_style_hover = lb_btn_style.duplicate()
+	lb_btn_style_hover.bg_color = Color(0.24, 0.45, 0.3)
+	
+	lb_btn.add_theme_stylebox_override("normal", lb_btn_style)
+	lb_btn.add_theme_stylebox_override("hover", lb_btn_style_hover)
+	lb_btn.pressed.connect(_on_leaderboard_btn_pressed)
+	
+	# Insert it right before PlayButton
+	var play_idx = start_vbox.get_node("PlayButton").get_index()
+	start_vbox.add_child(lb_btn)
+	start_vbox.move_child(lb_btn, play_idx)
+
+func _on_leaderboard_btn_pressed() -> void:
+	AudioManager.play_sfx("res://Audio/click_002.ogg")
+	var lb_overlay = $UI/LeaderboardOverlay
+	var list = lb_overlay.get_node("VBox/Scroll/List")
+	
+	# Clear previous entries
+	for child in list.get_children():
+		child.queue_free()
+		
+	var loading_lbl = Label.new()
+	loading_lbl.text = LocManager.translate_key("UI_LEADERBOARD_EMPTY")
+	loading_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	list.add_child(loading_lbl)
+	
+	start_menu.visible = false
+	lb_overlay.visible = true
+	lb_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var vbox_node = lb_overlay.get_node("VBox")
+	vbox_node.set_anchors_preset(Control.PRESET_CENTER)
+	vbox_node.offset_left = -250
+	vbox_node.offset_top = -250
+	vbox_node.offset_right = 250
+	vbox_node.offset_bottom = 250
+	
+	if YandexSDK.ysdk:
+		if YandexSDK.is_authorized:
+			YandexSDK.load_leaderboard_entries("score", true, 5, 10)
+		else:
+			# Not authorized
+			loading_lbl.text = LocManager.translate_key("UI_LEADERBOARD_LOGIN_REQUIRED")
+			YandexSDK.request_authorization()
+	else:
+		# Local mock entries for testing in Editor
+		_show_mock_leaderboard()
+
+func _show_mock_leaderboard() -> void:
+	var list = $UI/LeaderboardOverlay/VBox/Scroll/List
+	for child in list.get_children():
+		child.queue_free()
+	
+	var mock_entries = [
+		{"rank": 1, "name": "Cherry", "score": 9500},
+		{"rank": 2, "name": "Haisenx", "score": 7200},
+		{"rank": 3, "name": "Antigravity", "score": 5400},
+		{"rank": 4, "name": "Player 1", "score": 1200}
+	]
+	for entry in mock_entries:
+		_add_leaderboard_row(entry["rank"], entry["name"], entry["score"])
+
+func _add_leaderboard_row(rank: int, player_name: String, score_val: int) -> void:
+	var list = $UI/LeaderboardOverlay/VBox/Scroll/List
+	var hbox = HBoxContainer.new()
+	hbox.custom_minimum_size = Vector2(0, 40)
+	
+	var rank_lbl = Label.new()
+	rank_lbl.text = "#" + str(rank)
+	rank_lbl.custom_minimum_size = Vector2(50, 0)
+	rank_lbl.add_theme_color_override("font_color", Color.GOLD if rank == 1 else Color.SILVER if rank == 2 else Color(0.8, 0.5, 0.3) if rank == 3 else Color.WHITE)
+	rank_lbl.add_theme_font_size_override("font_size", 20)
+	hbox.add_child(rank_lbl)
+	
+	var name_lbl = Label.new()
+	name_lbl.text = player_name
+	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_lbl.add_theme_font_size_override("font_size", 18)
+	hbox.add_child(name_lbl)
+	
+	var score_lbl = Label.new()
+	score_lbl.text = LocManager.translate_key("UI_LEADERBOARD_SCORE_FORMAT", score_val)
+	score_lbl.add_theme_font_size_override("font_size", 18)
+	hbox.add_child(score_lbl)
+	
+	list.add_child(hbox)
+
+func _on_yandex_leaderboard_loaded(data) -> void:
+	var list = $UI/LeaderboardOverlay/VBox/Scroll/List
+	for child in list.get_children():
+		child.queue_free()
+		
+	var entries = []
+	if typeof(data) == TYPE_DICTIONARY:
+		if data.has("entries"):
+			entries = data["entries"]
+		elif data.has("entries_raw"):
+			entries = data["entries_raw"]
+			
+	if entries.size() == 0:
+		var empty_lbl = Label.new()
+		empty_lbl.text = LocManager.translate_key("UI_LEADERBOARD_EMPTY")
+		empty_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		list.add_child(empty_lbl)
+		return
+		
+	for entry in entries:
+		var rank = int(entry.get("rank", 0))
+		var score_val = int(entry.get("score", 0))
+		var player_info = entry.get("player", {})
+		var p_name = player_info.get("publicName", "Player")
+		if p_name == "":
+			p_name = "Player"
+		_add_leaderboard_row(rank, p_name, score_val)
