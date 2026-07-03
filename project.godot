@@ -12,7 +12,7 @@ config_version=5
 
 config/name="donutburger"
 run/main_scene="res://MainScene.tscn"
-config/features=PackedStringArray("4.6", "Forward Plus")
+config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
@@ -23,6 +23,20 @@ DataManager="*res://Scripts/DataManager.gd"
 LocManager="*res://Scripts/LocManager.gd"
 YandexSDK="*res://addons/godot-yandex-games-sdk/yandex_sdk.gd"
 
+[display]
+
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/godot-yandex-games-sdk/plugin.cfg")
+
+[gui]
+
+theme/custom_font="res://Fonts/chinese.ttf"
+locale/translations=PackedStringArray("res://localization.ru.translation", "res://localization.zh.translation")
+
 [physics]
 
 3d/physics_engine="Jolt Physics"
@@ -30,21 +44,3 @@ YandexSDK="*res://addons/godot-yandex-games-sdk/yandex_sdk.gd"
 [rendering]
 
 rendering_device/driver.windows="d3d12"
-
-[display]
-
-window/stretch/mode="canvas_items"
-window/stretch/aspect="expand"
-
-[gui]
-
-[gui]
-
-theme/custom_font="res://Fonts/chinese.ttf"
-
-locale/translations=PackedStringArray("res://localization.ru.translation", "res://localization.zh.translation")
-
-[editor_plugins]
-
-enabled=PackedStringArray("res://addons/godot-yandex-games-sdk/plugin.cfg")
-

@@ -46,6 +46,14 @@ func load_translations() -> void:
 		
 	# Synchronize Godot's locale with our current language
 	TranslationServer.set_locale(current_lang)
+	
+	# Explicitly load and add Translation resources to TranslationServer because Godot doesn't automatically load translations on headless/web unless forced or added in script
+	var t_ru = load("res://localization.ru.translation")
+	if t_ru:
+		TranslationServer.add_translation(t_ru)
+	var t_zh = load("res://localization.zh.translation")
+	if t_zh:
+		TranslationServer.add_translation(t_zh)
 		
 	# Force redraw on startup if MainScene is already initialized
 	if Engine.has_meta("MainScene"):
