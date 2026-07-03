@@ -7,6 +7,7 @@ signal food_list_updated
 signal level_changed(level: int, xp: int, xp_needed: int)
 signal level_rewarded(food_id: String)
 signal level_up_pending(options: Array)
+signal upgrades_updated(active_upgrades: Dictionary)
 
 var time_limit: int = 60
 var time_left: int = 60
@@ -20,24 +21,41 @@ var xp_needed: int = 30 # Levels are gained much faster now
 var extra_craft_chance: float = 0.0 # Chance to get an extra common ingredient during craft/upgrade
 var refund_chance: float = 0.0 # Chance to refund one of the spent ingredients
 var xp_multiplier: float = 1.0 # XP Gain multiplier
+var quality_upgrade_chance: float = 0.0 # Chance to upgrade ingredient rarity by +1 tier when rolling/receiving reward
+var auto_combine_enabled: bool = false
+var active_upgrades: Dictionary = {} # Stores upgrade_key -> level/count
 
-# Upgrade database
+# Upgrade database with rarities
 var UPGRADES = {
 	"time_limit": {
 		"name": "UPGRADE_TIME_LIMIT_NAME",
-		"desc": "UPGRADE_TIME_LIMIT_DESC"
+		"desc": "UPGRADE_TIME_LIMIT_DESC",
+		"rarity": DataManager.Rarity.COMMON
 	},
 	"extra_craft": {
 		"name": "UPGRADE_EXTRA_CRAFT_NAME",
-		"desc": "UPGRADE_EXTRA_CRAFT_DESC"
+		"desc": "UPGRADE_EXTRA_CRAFT_DESC",
+		"rarity": DataManager.Rarity.RARE
 	},
 	"refund": {
 		"name": "UPGRADE_REFUND_NAME",
-		"desc": "UPGRADE_REFUND_DESC"
+		"desc": "UPGRADE_REFUND_DESC",
+		"rarity": DataManager.Rarity.RARE
 	},
 	"xp_boost": {
 		"name": "UPGRADE_XP_BOOST_NAME",
-		"desc": "UPGRADE_XP_BOOST_DESC"
+		"desc": "UPGRADE_XP_BOOST_DESC",
+		"rarity": DataManager.Rarity.COMMON
+	},
+	"quality_up": {
+		"name": "UPGRADE_QUALITY_UP_NAME",
+		"desc": "UPGRADE_QUALITY_UP_DESC",
+		"rarity": DataManager.Rarity.UNIQUE
+	},
+	"auto_combine": {
+		"name": "UPGRADE_AUTO_COMBINE_NAME",
+		"desc": "UPGRADE_AUTO_COMBINE_DESC",
+		"rarity": DataManager.Rarity.LEGENDARY
 	}
 }
 
@@ -59,6 +77,10 @@ func start_game() -> void:
 	extra_craft_chance = 0.0
 	refund_chance = 0.0
 	xp_multiplier = 1.0
+	quality_upgrade_chance = 0.0
+	auto_combine_enabled = false
+	active_upgrades.clear()
+	emit_signal("upgrades_updated", active_upgrades)
 	emit_signal("level_changed", current_level, current_xp, xp_needed)
 	
 	# Give starting common products
@@ -87,6 +109,37 @@ func start_game() -> void:
 func _on_timer_timeout() -> void:
 	if not game_active:
 		return
+		
+	# Handle auto combine if perk is active - combine at most ONE recipe per second to show step-by-step cooking
+	if auto_combine_enabled:
+		var inv_size = inventory.size()
+		var combined = false
+		for i in range(inv_size):
+			for j in range(i + 1, inv_size):
+				# Try combining identical tier upgrade (3x) first
+				var item1 = inventory[i]
+				var item2 = inventory[j]
+				if item1 == item2:
+					var identical_indices = []
+					for k in range(inventory.size()):
+						if inventory[k] == item1:
+							identical_indices.append(k)
+					if identical_indices.size() >= 3:
+						combine_items(identical_indices[0], identical_indices[1])
+						combined = true
+						emit_signal("food_list_updated")
+						break
+				
+				# Try recipe combo
+				var result = DataManager.find_recipe(item1, item2)
+				if result != "":
+					combine_items(i, j)
+					combined = true
+					emit_signal("food_list_updated")
+					break
+			if combined:
+				break
+					
 	time_left -= 1
 	emit_signal("time_changed", time_left)
 	if time_left <= 0:
@@ -129,6 +182,24 @@ func roll_ingredient() -> bool:
 	if time_left <= 0:
 		end_game()
 	return true
+
+func get_upgraded_food(food_id: String) -> String:
+	if not DataManager.foods.has(food_id):
+		return food_id
+	var current_rarity = DataManager.foods[food_id]["rarity"]
+	if current_rarity == DataManager.Rarity.LEGENDARY:
+		return food_id
+		
+	var next_rarity = current_rarity + 1
+	var candidates = []
+	for fid in DataManager.foods:
+		# Filter only items of the exact next rarity
+		if DataManager.foods[fid]["rarity"] == next_rarity:
+			candidates.append(fid)
+			
+	if candidates.size() > 0:
+		return candidates[randi() % candidates.size()]
+	return food_id
 
 # Combine two items by index in inventory
 func combine_items(idx1: int, idx2: int) -> bool:
@@ -174,10 +245,13 @@ func combine_items(idx1: int, idx2: int) -> bool:
 					if DataManager.foods[id]["rarity"] == DataManager.Rarity.COMMON:
 						commons.append(id)
 				if commons.size() > 0:
-					inventory.append(commons[randi() % commons.size()])
+					var bonus_item = commons[randi() % commons.size()]
+					inventory.append(bonus_item)
+					
 					# Extra craft upgrade chance
 					if randf() < extra_craft_chance:
-						inventory.append(commons[randi() % commons.size()])
+						var extra_bonus = commons[randi() % commons.size()]
+						inventory.append(extra_bonus)
 					
 				AudioManager.play_sfx("res://Audio/confirmation_001.ogg", 3.0)
 				
@@ -216,10 +290,13 @@ func combine_items(idx1: int, idx2: int) -> bool:
 			if DataManager.foods[id]["rarity"] == DataManager.Rarity.COMMON:
 				commons.append(id)
 		if commons.size() > 0:
-			inventory.append(commons[randi() % commons.size()])
+			var bonus_item = commons[randi() % commons.size()]
+			inventory.append(bonus_item)
+			
 			# Extra craft upgrade chance
 			if randf() < extra_craft_chance:
-				inventory.append(commons[randi() % commons.size()])
+				var extra_bonus = commons[randi() % commons.size()]
+				inventory.append(extra_bonus)
 			
 		AudioManager.play_sfx("res://Audio/confirmation_002.ogg", 3.0)
 		
@@ -261,6 +338,9 @@ func gain_xp(amount: int) -> void:
 	emit_signal("level_changed", current_level, current_xp, xp_needed)
 
 func select_upgrade(upgrade_key: String) -> void:
+	active_upgrades[upgrade_key] = active_upgrades.get(upgrade_key, 0) + 1
+	emit_signal("upgrades_updated", active_upgrades)
+	
 	match upgrade_key:
 		"time_limit":
 			time_limit += 10
@@ -272,6 +352,11 @@ func select_upgrade(upgrade_key: String) -> void:
 			refund_chance += 0.15
 		"xp_boost":
 			xp_multiplier += 0.30
+		"quality_up":
+			quality_upgrade_chance += 0.15
+		"auto_combine":
+			auto_combine_enabled = true
+			
 	# Resume game time
 	var timer = get_node_or_null("GameTimer")
 	if timer:
@@ -285,15 +370,55 @@ func _on_level_up() -> void:
 			commons.append(id)
 	if commons.size() > 0:
 		var rand_food = commons[randi() % commons.size()]
+		if randf() < quality_upgrade_chance:
+			rand_food = get_upgraded_food(rand_food)
 		inventory.append(rand_food)
 		emit_signal("food_list_updated")
 		emit_signal("level_rewarded", rand_food)
 		AudioManager.play_sfx("res://Audio/confirmation_001.ogg", 3.0)
 		
-	# Select 3 random unique upgrades from the list
-	var keys = UPGRADES.keys()
-	keys.shuffle()
-	var selected_upgrades = [keys[0], keys[1], keys[2]]
+	# Select upgrade options based on rarity chances
+	# legendary: 1%, unique: 9%, rare: 30%, common: 60%
+	var candidates = []
+	for k in UPGRADES:
+		if k == "auto_combine" and auto_combine_enabled:
+			continue
+		candidates.append(k)
+		
+	var selected_upgrades = []
+	# Roll 3 times to get 3 unique options
+	while selected_upgrades.size() < min(3, candidates.size()):
+		var roll = randf()
+		var target_rarity = DataManager.Rarity.COMMON
+		if roll < 0.01:
+			target_rarity = DataManager.Rarity.LEGENDARY
+		elif roll < 0.10:
+			target_rarity = DataManager.Rarity.UNIQUE
+		elif roll < 0.40:
+			target_rarity = DataManager.Rarity.RARE
+		else:
+			target_rarity = DataManager.Rarity.COMMON
+			
+		# Find upgrades matching rolled rarity
+		var matching = []
+		for c in candidates:
+			if c in selected_upgrades:
+				continue
+			if UPGRADES[c]["rarity"] == target_rarity:
+				matching.append(c)
+				
+		# Fallback if no upgrades match this rarity or they are already chosen
+		if matching.size() == 0:
+			var any_available = []
+			for c in candidates:
+				if not c in selected_upgrades:
+					any_available.append(c)
+			if any_available.size() > 0:
+				selected_upgrades.append(any_available[randi() % any_available.size()])
+			else:
+				break
+		else:
+			selected_upgrades.append(matching[randi() % matching.size()])
 	
 	# Pause game timer while selecting upgrade
 	var timer = get_node_or_null("GameTimer")

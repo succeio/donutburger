@@ -426,10 +426,10 @@ func _ready() -> void:
 
 func get_next_tier_food(food_id: String) -> String:
 	if not foods.has(food_id):
-		return ""
+		return food_id
 	var current_rarity = foods[food_id]["rarity"]
 	if current_rarity == Rarity.LEGENDARY:
-		return "" # Already max tier
+		return food_id # Keep same if already max tier
 		
 	var next_rarity = current_rarity + 1
 	var candidates = []
@@ -439,7 +439,7 @@ func get_next_tier_food(food_id: String) -> String:
 			
 	if candidates.size() > 0:
 		return candidates[randi() % candidates.size()]
-	return ""
+	return food_id
 
 func find_recipe(in1: String, in2: String) -> String:
 	for out in RECIPES_DICT:

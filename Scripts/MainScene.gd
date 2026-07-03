@@ -21,6 +21,7 @@ extends Node3D
 @onready var upgrade_overlay = $UI/UpgradeOverlay
 @onready var upgrade_cards_container = $UI/UpgradeOverlay/VBox/CardsContainer
 @onready var upgrade_title = $UI/UpgradeOverlay/VBox/Title
+@onready var upgrades_list = $UI/MainLayout/CenterSpace/UpgradesList
 
 var selected_inventory_index: int = -1
 var food_3d_node: Node3D = null
@@ -56,6 +57,7 @@ func _ready() -> void:
 	GameState.level_changed.connect(_on_level_changed)
 	GameState.level_rewarded.connect(_queue_reward_popup)
 	GameState.level_up_pending.connect(_on_level_up_pending)
+	GameState.upgrades_updated.connect(_on_upgrades_updated)
 	
 	# Start in menu mode, display random rotating food
 	menu_mode = true
@@ -262,7 +264,8 @@ func _setup_popup_ui() -> void:
 	popup_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 	
 	# Set direct position offset to avoid top-left default alignment in CanvasLayer
-	popup_panel.position = (Vector2(1152, 648) - popup_panel.custom_minimum_size) / 2.0
+	# Shift the pop-up higher (Y offset = -140 pixels from center) to prevent overlapping with cards/perks
+	popup_panel.position = (Vector2(1152, 648) - popup_panel.custom_minimum_size) / 2.0 - Vector2(0, 140)
 
 # Keep track of spawned food models cooked during the game
 var cooked_food_models: Array[Node3D] = []
@@ -351,19 +354,13 @@ func _show_next_popup() -> void:
 	popup_label.text = LocManager.translate_key(data["name"])
 	popup_texture.texture = load(data["preview"])
 	
-	# Determine if we should treat it as level reward, but make sure quality is not above Green (RARE/COMMON)
-	var final_rarity = data["rarity"]
-	# Limit color to green (RARE) or gray (COMMON)
-	if final_rarity > DataManager.Rarity.RARE:
-		final_rarity = DataManager.Rarity.RARE
-		
-	var rarity_color = DataManager.RARITY_INFO[final_rarity]["color"]
+	var rarity_color = DataManager.RARITY_INFO[data["rarity"]]["color"]
 	
 	# Match congrats text
 	var congrats_label = popup_panel.get_child(0).get_child(0) as Label
 	if is_reward:
 		congrats_label.text = LocManager.translate_key("POPUP_LEVEL_UP")
-		congrats_label.add_theme_color_override("font_color", Color(0.1, 0.8, 0.1)) # Pure Green
+		congrats_label.add_theme_color_override("font_color", rarity_color)
 	else:
 		var rarity_name_key = DataManager.RARITY_INFO[data["rarity"]]["name"]
 		var rarity_translated = LocManager.translate_key(rarity_name_key).to_upper()
@@ -371,18 +368,19 @@ func _show_next_popup() -> void:
 		congrats_label.add_theme_color_override("font_color", rarity_color)
 	
 	var sb = popup_panel.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
-	sb.border_color = Color(0.1, 0.8, 0.1) if is_reward else rarity_color
+	sb.border_color = rarity_color
 	sb.set_border_width_all(5)
 	popup_panel.add_theme_stylebox_override("panel", sb)
 	
 	var glow_sb = popup_glow.get_child(0).get_theme_stylebox("panel").duplicate() as StyleBoxFlat
-	glow_sb.bg_color = Color(0.1, 0.8, 0.1, 0.15) if is_reward else Color(1.0, 0.85, 0.3, 0.15)
-	glow_sb.shadow_color = Color(0.1, 0.8, 0.1) if is_reward else rarity_color
+	glow_sb.bg_color = rarity_color
+	glow_sb.bg_color.a = 0.15
+	glow_sb.shadow_color = rarity_color
 	glow_sb.shadow_color.a = 0.95
 	glow_sb.shadow_size = 18
 	popup_glow.get_child(0).add_theme_stylebox_override("panel", glow_sb)
 	
-	popup_label.add_theme_color_override("font_color", Color(0.1, 0.8, 0.1) if is_reward else rarity_color)
+	popup_label.add_theme_color_override("font_color", rarity_color)
 	
 	popup_panel.visible = true
 	popup_panel.set_anchors_preset(Control.PRESET_CENTER)
@@ -390,7 +388,8 @@ func _show_next_popup() -> void:
 	popup_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 	
 	var viewport_size = popup_panel.get_viewport_rect().size
-	popup_panel.position = (viewport_size - popup_panel.custom_minimum_size) / 2.0
+	# Shift the pop-up higher (Y offset = -140 pixels from center) to prevent overlapping with cards/perks
+	popup_panel.position = (viewport_size - popup_panel.custom_minimum_size) / 2.0 - Vector2(0, 140)
 	
 	popup_panel.scale = Vector2(0.1, 0.1)
 	popup_panel.pivot_offset = popup_panel.custom_minimum_size / 2.0
@@ -758,6 +757,44 @@ func _on_level_changed(level: int, xp: int, xp_needed: int) -> void:
 	level_progress_bar.max_value = xp_needed
 	level_progress_bar.value = xp
 
+func _on_upgrades_updated(active_upgrades: Dictionary) -> void:
+	# Clear active icons
+	for child in upgrades_list.get_children():
+		child.queue_free()
+		
+	for upgrade_key in active_upgrades:
+		var count = active_upgrades[upgrade_key]
+		if count <= 0:
+			continue
+			
+		var upgrade_rarity = GameState.UPGRADES[upgrade_key]["rarity"]
+		var color = DataManager.RARITY_INFO[upgrade_rarity]["color"]
+			
+		var panel = PanelContainer.new()
+		var sb = StyleBoxFlat.new()
+		sb.bg_color = color * 0.15
+		sb.bg_color.a = 0.85
+		sb.border_color = color
+		sb.set_border_width_all(2)
+		sb.set_corner_radius_all(8)
+		panel.add_theme_stylebox_override("panel", sb)
+		
+		var margin = MarginContainer.new()
+		margin.add_theme_constant_override("margin_left", 8)
+		margin.add_theme_constant_override("margin_right", 8)
+		margin.add_theme_constant_override("margin_top", 4)
+		margin.add_theme_constant_override("margin_bottom", 4)
+		
+		var lbl = Label.new()
+		var upgrade_name = LocManager.translate_key(GameState.UPGRADES[upgrade_key]["name"])
+		lbl.text = "%s x%d" % [upgrade_name, count]
+		lbl.add_theme_font_size_override("font_size", 12)
+		lbl.add_theme_color_override("font_color", Color(0.95, 0.95, 0.95))
+		
+		margin.add_child(lbl)
+		panel.add_child(margin)
+		upgrades_list.add_child(panel)
+
 func _on_level_up_pending(options: Array) -> void:
 	# Clear old cards
 	for child in upgrade_cards_container.get_children():
@@ -770,10 +807,14 @@ func _on_level_up_pending(options: Array) -> void:
 		var card = PanelContainer.new()
 		card.custom_minimum_size = Vector2(180, 240)
 		
-		# Stylish Panel look
+		# Get rarity of the upgrade
+		var upgrade_rarity = GameState.UPGRADES[upgrade_key]["rarity"]
+		var rarity_color = DataManager.RARITY_INFO[upgrade_rarity]["color"]
+		
+		# Stylish Panel look matching rarity color
 		var sb = StyleBoxFlat.new()
 		sb.bg_color = Color(0.12, 0.12, 0.16, 0.95)
-		sb.border_color = Color(0.1, 0.8, 0.1) # Cool green quality
+		sb.border_color = rarity_color
 		sb.set_border_width_all(3)
 		sb.set_corner_radius_all(10)
 		sb.shadow_color = Color(0, 0, 0, 0.5)
@@ -790,7 +831,7 @@ func _on_level_up_pending(options: Array) -> void:
 		name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		name_lbl.add_theme_font_size_override("font_size", 18)
-		name_lbl.add_theme_color_override("font_color", Color(0.8, 1.0, 0.8))
+		name_lbl.add_theme_color_override("font_color", rarity_color)
 		vbox.add_child(name_lbl)
 		
 		# Upgrade description
@@ -799,7 +840,7 @@ func _on_level_up_pending(options: Array) -> void:
 		desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		desc_lbl.add_theme_font_size_override("font_size", 13)
-		desc_lbl.add_theme_color_override("font_color", Color(0.65, 0.65, 0.7))
+		desc_lbl.add_theme_color_override("font_color", Color(0.85, 0.85, 0.9))
 		vbox.add_child(desc_lbl)
 		
 		# Select button
@@ -808,14 +849,14 @@ func _on_level_up_pending(options: Array) -> void:
 		select_btn.custom_minimum_size = Vector2(100, 35)
 		select_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		
-		# TF2 green style
+		# Stylish button matches rarity theme
 		var btn_style = StyleBoxFlat.new()
-		btn_style.bg_color = Color(0.15, 0.65, 0.25)
+		btn_style.bg_color = rarity_color * 0.7
 		btn_style.set_corner_radius_all(6)
 		select_btn.add_theme_stylebox_override("normal", btn_style)
 		
 		var btn_style_hover = btn_style.duplicate()
-		btn_style_hover.bg_color = Color(0.2, 0.8, 0.3)
+		btn_style_hover.bg_color = rarity_color
 		select_btn.add_theme_stylebox_override("hover", btn_style_hover)
 		
 		# Bind click logic
